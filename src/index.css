@@ -1,0 +1,344 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════
+   EZRADOM.COM — TECH SPEC POSTER SYSTEM
+   Red (#C8102E) on Cream (#F0EDE8)
+   Grammar: hairline rules → metadata rows → display type → parameters
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg:          #F0EDE8;
+  --ink:         #C8102E;
+  --ink-dim:     rgba(200, 16, 46, 0.72);
+  --ink-faint:   rgba(200, 16, 46, 0.55);
+  --rule:        rgba(200, 16, 46, 0.32);
+  --rule-strong: rgba(200, 16, 46, 0.55);
+
+  --font-display: 'Bebas Neue', 'Arial Narrow', sans-serif;
+  --font-label:   'JetBrains Mono', 'Courier New', monospace;
+  --font-body:    'Inter', Helvetica, sans-serif;
+
+  --gutter: 48px;
+  --max:    1200px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: auto;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  cursor: crosshair;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { min-width: 0; }
+
+::selection { background: var(--ink); color: var(--bg); }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Layout ── */
+.wrap {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+@media (max-width: 768px) {
+  :root { --gutter: 20px; }
+}
+
+/* ── Inverted theme (red bg, cream text) ── */
+.theme-inverted {
+  --bg:          #C8102E;
+  --ink:         #F0EDE8;
+  --ink-dim:     rgba(240, 237, 232, 0.72);
+  --ink-faint:   rgba(240, 237, 232, 0.55);
+  --rule:        rgba(240, 237, 232, 0.32);
+  --rule-strong: rgba(240, 237, 232, 0.55);
+  background: #C8102E;
+  color: #F0EDE8;
+}
+
+/* ── Hairline Rules ── */
+.rule        { width: 100vw; margin-left: calc(-50vw + 50%); height: 1px; background: var(--rule); flex-shrink: 0; }
+.rule--strong { background: var(--rule-strong); }
+
+/* ── Metadata Row ──
+   Sits directly on a hairline rule. Distributes labels across the full width.
+   ─────────────────────────────────────────────────────────────────── */
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 7px 0;
+  flex-wrap: wrap;
+}
+
+.meta-label {
+  font-family: var(--font-label);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.meta-label--faint {
+  color: var(--ink-faint);
+}
+
+.meta-label--ink {
+  color: var(--ink);
+}
+
+/* ── Display Type ──
+   The primary visual element. Ultra-bold condensed. Fills width.
+   ─────────────────────────────────────────────────────────────────── */
+.display {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  line-height: 0.88;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+/* Size scale — adjust per content length */
+.display--xl  { font-size: clamp(72px,  18vw, 260px); }
+.display--lg  { font-size: clamp(56px,  13vw, 190px); }
+.display--md  { font-size: clamp(38px,   7vw,  96px); }
+.display--sm  { font-size: clamp(26px,   4vw,  56px); }
+
+/* Fill-width utility: wraps a display line so it can be sized to fill 100% */
+.display-line {
+  display: block;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 0.90;
+  width: 100%;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+/* Script override for section titles */
+.display-script {
+  font-family: 'Mr Dafoe', cursive !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+  line-height: 0.85 !important;
+}
+
+/* ── Section Heading ──
+   Medium bold uppercase — like "DETROIT FAULT LINE" in reference.
+   ─────────────────────────────────────────────────────────────────── */
+.section-heading {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 68px);
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.0;
+  letter-spacing: 0.02em;
+}
+
+/* ── Parameter Entry ──
+   Label over value, with optional scale ticks beside it.
+   ─────────────────────────────────────────────────────────────────── */
+.param-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.param-label {
+  font-family: var(--font-label);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  line-height: 1;
+}
+
+.param-value {
+  font-family: var(--font-label);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+/* ── Tick Scale Bar ── */
+.tick-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.tick {
+  width: 1px;
+  background: var(--rule-strong);
+}
+
+.tick--long  { height: 10px; }
+.tick--short { height: 5px; }
+
+/* ── Body Text ── */
+.body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.70;
+  color: var(--ink-dim);
+  font-weight: 400;
+}
+
+.body--sm {
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* ── CTA Links / Buttons ── */
+.cta-primary {
+  font-family: var(--font-label);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--bg);
+  background: var(--ink);
+  padding: 11px 24px;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  display: inline-block;
+  transition: opacity 0.2s ease;
+}
+.cta-primary:hover { opacity: 0.82; }
+
+.cta-ghost {
+  font-family: var(--font-label);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+  background: transparent;
+  padding: 10px 24px;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+  display: inline-block;
+  transition: background 0.2s ease;
+}
+.cta-ghost:hover { background: rgba(200,16,46,0.06); }
+
+/* ── Section wrapper — adds top rule + bottom rule spacing ── */
+.spec-section {
+  position: relative;
+  padding: 0;
+}
+
+/* ── Poster numeral (bleeds at page bottom) ── */
+.bleed-numeral {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 0.80;
+  user-select: none;
+  pointer-events: none;
+  display: block;
+}
+
+/* ── Scroll animation (typewriter handled in JS) ── */
+
+/* ── Link hover ── */
+.link-ink {
+  font-family: var(--font-label);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.link-ink:hover { opacity: 0.60; }
+
+/* ── Two-column grid ── */
+.col-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.col-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+
+.col-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+
+/* ── Vertical rule (column divider) ── */
+.v-rule {
+  width: 1px;
+  background: var(--rule);
+  align-self: stretch;
+}
+
+/* ── Callout text (stacked right like "K– / ROS / 48") ── */
+.callout-stack {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 3vw, 40px);
+  color: var(--ink);
+  line-height: 1.1;
+  text-align: right;
+}
+
+/* ── ImageSlot overrides for cream/red palette ── */
+[data-slot] {
+  background: rgba(200,16,46,0.04) !important;
+  border: 1px solid var(--rule-strong) !important;
+}
+
+/* ── Section spacing — breathing room between sections ── */
+section {
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+section#hero {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+section#work {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+@media (max-width: 768px) {
+  section { padding-top: 56px; padding-bottom: 56px; }
+  section#hero { padding-top: 0; padding-bottom: 40px; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .col-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .col-2, .col-3, .col-4 { grid-template-columns: 1fr; }
+  .display--xl { font-size: clamp(52px, 18vw, 120px); }
+}
