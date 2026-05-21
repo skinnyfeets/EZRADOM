@@ -89,6 +89,7 @@ export default function Testimonials() {
             src={ezraTestimonials}
             alt=""
             aria-hidden="true"
+            className="tst-photo"
             style={{
               position: 'absolute',
               right: '2%',
@@ -125,6 +126,7 @@ export default function Testimonials() {
         @media (max-width: 640px) {
           .test-grid { grid-template-columns: 1fr !important; }
           .test-grid > div:nth-child(even) { padding-left: max(var(--gutter), calc((100vw - var(--max)) / 2)); }
+          .tst-photo { right: calc(2% - 15px) !important; bottom: calc(-40% - 50px) !important; }
         }
       `}</style>
     </section>

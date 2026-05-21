@@ -81,7 +81,10 @@ export default function About() {
             <div style={{ height: '400px', overflow: 'hidden' }}>
               <img
                 src={ezraAbout}
-                alt="Ezra Dom, brand strategist and branding expert, founder of Luminary Graphix"
+                alt="Ezra Dombowsky, freelance brand strategist and designer based in Kelowna BC, founder of Luminary Graphix"
+                loading="lazy"
+                width="380"
+                height="400"
                 style={{
                   width: '100%',
                   height: '100%',

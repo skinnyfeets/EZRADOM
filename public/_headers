@@ -1,0 +1,22 @@
+/*
+  Link: </.well-known/api-catalog>; rel="api-catalog"
+  Link: </llms.md>; rel="alternate"; type="text/markdown"
+  Link: </.well-known/agent-skills/index.json>; rel="https://agentskills.io/rel/index"
+  Link: </.well-known/mcp/server-card.json>; rel="mcp-server-card"
+  Vary: Accept
+
+/.well-known/api-catalog
+  Content-Type: application/linkset+json; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/.well-known/agent-skills/index.json
+  Content-Type: application/json; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/.well-known/mcp/server-card.json
+  Content-Type: application/json; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/llms.md
+  Content-Type: text/markdown; charset=utf-8
+  Access-Control-Allow-Origin: *

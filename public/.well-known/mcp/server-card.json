@@ -1,0 +1,32 @@
+{
+  "serverInfo": {
+    "name": "Ezra Dombowsky — Brand Strategy Tools",
+    "version": "1.0.0",
+    "description": "Brand strategy tools and resources from Ezra Dombowsky, freelance brand strategist and designer based in Kelowna, BC, Canada.",
+    "url": "https://ezradom.com",
+    "contact": "itsezradom@gmail.com"
+  },
+  "transport": null,
+  "capabilities": {
+    "resources": [
+      {
+        "name": "Brand Archetype Directory",
+        "uri": "https://ezradom.com/tools/archetype-directory",
+        "description": "100 brand archetypes across 17 categories with definitions, keywords, and examples"
+      },
+      {
+        "name": "Brand Strategy Blog",
+        "uri": "https://ezradom.com/blog",
+        "description": "Articles on brand strategy, archetypes, and positioning"
+      },
+      {
+        "name": "Site Overview (Markdown)",
+        "uri": "https://ezradom.com/llms.md",
+        "mimeType": "text/markdown"
+      }
+    ],
+    "tools": []
+  },
+  "status": "static-site",
+  "note": "No active MCP server endpoint. This card describes available resources. An MCP server exposing the archetype directory and tools programmatically is planned."
+}

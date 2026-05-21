@@ -31,12 +31,16 @@ export default function Hero() {
           </span>
         </div>
 
-        {/* ── Top meta row ── */}
+        {/* ── Top meta row — hidden on mobile (Portfolio title overlaps it) ── */}
         <div className="rule hero-anim" />
-        <div className="meta-row hero-anim">
+        <div className="meta-row hero-anim hero-top-meta">
           <span className="meta-label">STUDIO LUMINARY</span>
           <span className="meta-label meta-label--faint">PEACHLAND, BC</span>
           <span className="meta-label meta-label--faint">SERIES 1 / 2026</span>
+        </div>
+        {/* Mobile-only: STUDIO LUMINARY label between the two rules */}
+        <div className="hero-mobile-studio" style={{ display: 'none', justifyContent: 'flex-end', padding: '6px 0' }}>
+          <span className="meta-label meta-label--faint">STUDIO LUMINARY</span>
         </div>
         <div className="rule hero-anim" />
 
@@ -67,8 +71,12 @@ export default function Hero() {
           {/* Photo — absolute, right-anchored, behind */}
           <img
             src={ezraPhoto}
-            alt="Ezra Dom — brand strategist and identity designer, founder of Luminary Graphix, BC Canada"
+            alt="Ezra Dombowsky — freelance brand strategist and designer, founder of Luminary Graphix, based in Kelowna BC Canada"
             className="hero-photo-img"
+            loading="eager"
+            fetchPriority="high"
+            width="680"
+            height="680"
             style={{
               position: 'absolute',
               right: '-2%',
@@ -88,13 +96,6 @@ export default function Hero() {
           <div className="ph-corner ph-br" style={{ right: '0' }} />
           <div className="ph-corner ph-bl" style={{ right: 'auto', left: '42%' }} />
 
-          {/* Coord labels */}
-          <span className="param-label" style={{
-            position: 'absolute', top: '14px', left: 'calc(42% + 8px)', fontSize: '8px', zIndex: 2,
-          }}>N 49°52′</span>
-          <span className="param-label" style={{
-            position: 'absolute', top: '14px', right: '8px', fontSize: '8px', zIndex: 2,
-          }}>W 119°44′</span>
           <span className="param-label" style={{
             position: 'absolute', bottom: '10px', left: 'calc(42% + 8px)', fontSize: '8px', zIndex: 2,
           }}>ED — 01</span>
@@ -148,14 +149,16 @@ export default function Hero() {
         <div className="rule hero-anim" />
 
         <div style={{ padding: '24px 0 28px' }} className="hero-anim">
-          <span className="display-line" style={{
+          <h1 className="display-line" style={{
             fontSize: 'clamp(32px, 5.5vw, 74px)',
             color: 'var(--ink)',
             whiteSpace: 'normal',
             lineHeight: 1.0,
+            margin: 0,
+            fontWeight: 'inherit',
           }}>
             DIFFERENT IS BETTER THAN BETTER.
-          </span>
+          </h1>
         </div>
 
         <div className="rule hero-anim" />
@@ -226,7 +229,8 @@ export default function Hero() {
         <div className="meta-row hero-anim">
           <span className="meta-label">02</span>
           <span className="meta-label meta-label--faint">LUMINARY GRAPHIX</span>
-          <span className="meta-label meta-label--faint">BC CANADA</span>
+          <span className="meta-label meta-label--faint hero-bc-label">BC CANADA</span>
+          <span className="meta-label meta-label--faint hero-studio-label">STUDIO LUMINARY</span>
           <span className="meta-label meta-label--faint">2022 — PRESENT</span>
         </div>
         <div className="rule hero-anim" />
@@ -270,6 +274,13 @@ export default function Hero() {
             width: 88% !important;
           }
           .hero-params { grid-template-columns: 1fr !important; row-gap: 10px !important; }
+          .hero-top-meta { display: none !important; }
+          .hero-mobile-studio { display: flex !important; }
+          .hero-bc-label { display: none !important; }
+          .hero-studio-label { display: inline !important; }
+        }
+        @media (min-width: 641px) {
+          .hero-studio-label { display: none !important; }
         }
       `}</style>
 

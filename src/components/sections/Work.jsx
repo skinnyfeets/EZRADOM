@@ -43,7 +43,7 @@ function StatShowcase({ stats }) {
           }}>
             {s.value}
           </div>
-          <span className="param-label" style={{ color: 'var(--ink-faint)', display: 'block', lineHeight: 1.4 }}>{s.label}</span>
+          <span className="param-label stat-cell-label" style={{ color: 'var(--ink-faint)', display: 'block', lineHeight: 1.4, wordBreak: 'break-word' }}>{s.label}</span>
         </div>
       ))}
     </div>
@@ -251,9 +251,9 @@ function SecCard({ type, title, desc, slotName, src, objectPosition = 'center', 
   const borderBottom = gridIndex < 2 ? '1px solid var(--rule)' : 'none'
   return (
     <div style={{ borderRight, borderBottom, padding: '16px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <span className="param-label anim" style={{ display: 'block', marginBottom: '6px', fontSize: '8px' }}>{type}</span>
+      <span className="param-label anim sec-card-type" style={{ display: 'block', marginBottom: '6px', fontSize: '8px', minHeight: '2.6em' }}>{type}</span>
       <div style={{ height: '1px', background: 'var(--rule)', marginBottom: '10px' }} />
-      <ImageSlot name={slotName} height="270px" src={src} objectFit="cover" objectPosition={objectPosition} />
+      <ImageSlot name={slotName} height="216px" src={src} objectFit="cover" objectPosition={objectPosition} />
       <div className="anim" style={{ marginTop: '10px', minWidth: 0, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(16px, 2vw, 22px)', color: 'var(--ink)', letterSpacing: '0.02em', marginBottom: '4px', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
           {title}
@@ -473,7 +473,10 @@ export default function Work() {
       <style>{`
         @media (max-width: 640px) {
           .stat-showcase { grid-template-columns: 1fr 1fr !important; }
+          .stat-showcase > div { padding: 12px 10px 10px !important; }
+          .stat-cell-label { font-size: 7px !important; line-height: 1.5 !important; word-break: break-word !important; }
           .project-images-col { padding-left: 0 !important; }
+          .sec-card-type { min-height: auto !important; }
         }
       `}</style>
     </section>

@@ -1,0 +1,47 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://ezradom.com/",
+      "service-doc": [
+        { "href": "https://ezradom.com/", "type": "text/html" },
+        { "href": "https://ezradom.com/llms.md", "type": "text/markdown" }
+      ],
+      "describedby": [
+        { "href": "https://ezradom.com/llms.md", "type": "text/markdown" }
+      ]
+    },
+    {
+      "anchor": "https://ezradom.com/tools/archetype-directory",
+      "service-doc": [
+        { "href": "https://ezradom.com/tools/archetype-directory", "type": "text/html" }
+      ],
+      "type": [
+        { "href": "https://schema.org/Dataset" }
+      ]
+    },
+    {
+      "anchor": "https://ezradom.com/tools/archetype-finder",
+      "service-doc": [
+        { "href": "https://ezradom.com/tools/archetype-finder", "type": "text/html" }
+      ]
+    },
+    {
+      "anchor": "https://ezradom.com/tools/positioning-builder",
+      "service-doc": [
+        { "href": "https://ezradom.com/tools/positioning-builder", "type": "text/html" }
+      ]
+    },
+    {
+      "anchor": "https://ezradom.com/tools/brand-audit",
+      "service-doc": [
+        { "href": "https://ezradom.com/tools/brand-audit", "type": "text/html" }
+      ]
+    },
+    {
+      "anchor": "https://ezradom.com/sitemap.xml",
+      "service-doc": [
+        { "href": "https://ezradom.com/sitemap.xml", "type": "application/xml" }
+      ]
+    }
+  ]
+}

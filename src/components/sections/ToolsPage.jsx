@@ -11,7 +11,8 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
   const isLive = !!(href || navPage)
   return (
     <div style={{ borderBottom: '1px solid var(--rule)', padding: '28px 0' }} className="anim">
-      <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: '24px', alignItems: 'start' }}>
+      {/* Desktop layout: number | content | button */}
+      <div className="tool-card-desktop" style={{ display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: '24px', alignItems: 'start' }}>
         <span className="param-label" style={{ paddingTop: '4px' }}>{number}</span>
         <div>
           <div style={{ height: '1px', background: 'var(--rule)', marginBottom: '14px' }} />
@@ -48,6 +49,52 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
           </span>
         )}
       </div>
+
+      {/* Mobile layout: number + button on top, content below */}
+      <div className="tool-card-mobile" style={{ display: 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <span className="param-label">{number}</span>
+          {isLive ? (
+            <button
+              onClick={handleOpen}
+              style={{
+                fontFamily: 'var(--font-label)',
+                fontSize: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.22em',
+                color: 'var(--bg)',
+                background: 'var(--ink)',
+                border: 'none',
+                padding: '10px 18px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              OPEN TOOL →
+            </button>
+          ) : (
+            <span style={{ fontFamily: 'var(--font-label)', fontSize: '10px', letterSpacing: '0.18em', color: 'var(--ink-faint)', textTransform: 'uppercase' }}>
+              COMING SOON
+            </span>
+          )}
+        </div>
+        <div style={{ height: '1px', background: 'var(--rule)', marginBottom: '14px' }} />
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(22px, 7vw, 36px)', color: 'var(--ink)', letterSpacing: '0.02em', marginBottom: '8px', lineHeight: 1 }}>
+          {title}
+        </div>
+        <p className="body body--sm" style={{ marginBottom: '10px' }}>{desc}</p>
+        <span className="param-label">{tag}</span>
+      </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .tool-card-desktop { display: none !important; }
+          .tool-card-mobile { display: block !important; }
+        }
+      `}</style>
     </div>
   )
 }

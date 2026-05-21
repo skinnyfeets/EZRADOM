@@ -1,0 +1,40 @@
+{
+  "$schema": "https://agentskills.io/schema/v0.2.0/index.json",
+  "skills": [
+    {
+      "name": "brand-archetype-quiz",
+      "type": "tool",
+      "description": "Interactive quiz that identifies a brand's primary, secondary, and tension archetypes from a library of 100 archetypes across 17 categories. Free, no signup required.",
+      "url": "https://ezradom.com/tools/archetype-finder",
+      "sha256": ""
+    },
+    {
+      "name": "brand-archetype-directory",
+      "type": "resource",
+      "description": "Searchable directory of 100 brand and storytelling archetypes across 17 categories. Each entry includes definition, keywords, mythology reference, and real brand examples.",
+      "url": "https://ezradom.com/tools/archetype-directory",
+      "sha256": ""
+    },
+    {
+      "name": "brand-positioning-builder",
+      "type": "tool",
+      "description": "7-step brand positioning statement builder that generates a Neumeier Onliness Statement and full positioning document.",
+      "url": "https://ezradom.com/tools/positioning-builder",
+      "sha256": ""
+    },
+    {
+      "name": "brand-audit-checklist",
+      "type": "tool",
+      "description": "20-point brand audit that scores positioning, visual identity, voice, consistency, and proof. Returns a prioritised fix list.",
+      "url": "https://ezradom.com/tools/brand-audit",
+      "sha256": ""
+    },
+    {
+      "name": "brand-strategy-blog",
+      "type": "resource",
+      "description": "Brand strategy writing on archetypes, positioning, differentiation, and brand psychology by Ezra Dombowsky.",
+      "url": "https://ezradom.com/blog",
+      "sha256": ""
+    }
+  ]
+}

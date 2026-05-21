@@ -39,6 +39,9 @@ export default function Contact() {
             <p className="body">
               If you're building a business and you don't want to compete on price, build a brand with me.
             </p>
+            <p className="body" style={{ marginTop: '16px', opacity: 0.6, fontSize: '13px' }}>
+              Based in BC, Canada — working with clients in the Okanagan, across Canada, and worldwide.
+            </p>
           </div>
           <div style={{ padding: '32px 0 32px 40px', display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
             <a href="https://www.instagram.com/itsezradom/" target="_blank" rel="noopener noreferrer" className="cta-primary" style={{ textAlign: 'center' }}>
