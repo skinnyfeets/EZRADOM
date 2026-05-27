@@ -132,6 +132,14 @@ const TOOLS = [
     href: null,
     page: 'brand-audit',
   },
+  {
+    number: 'T — 005',
+    title: 'BRAND MOODBOARD',
+    desc: 'Infinite canvas for visual brand direction. Drop images, add notes, build colour palettes, and map out the look and feel of a brand — all in one place. No account needed.',
+    tag: 'CREATIVE / FREE / BETA',
+    href: '/canvas.html',
+    page: null,
+  },
 ]
 
 export default function ToolsPage() {

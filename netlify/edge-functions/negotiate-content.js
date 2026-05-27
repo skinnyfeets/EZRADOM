@@ -4,7 +4,7 @@ export default async (request, context) => {
   const url = new URL(request.url)
 
   // Only negotiate HTML routes — skip assets, static files, and llms.md itself
-  if (/\.(js|css|png|jpg|jpeg|svg|ico|woff2?|ttf|eot|json|xml|txt|md|map)(\?.*)?$/.test(url.pathname)) {
+  if (/\.(js|css|png|jpg|jpeg|svg|ico|woff2?|ttf|eot|json|xml|txt|md|map|html)(\?.*)?$/.test(url.pathname)) {
     return context.next()
   }
 
