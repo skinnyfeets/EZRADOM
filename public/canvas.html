@@ -2680,6 +2680,18 @@ function _genBoardId() {
       });
 }
 
+function _stripBase64ForCloud(cards) {
+  return (cards || []).map(card => {
+    if (card.type === 'image' && card.content?.src?.startsWith('data:')) {
+      return { ...card, content: { ...card.content, src: null } };
+    }
+    if (card.type === 'file' && card.content?.thumbnail?.startsWith('data:')) {
+      return { ...card, content: { ...card.content, thumbnail: null } };
+    }
+    return card;
+  });
+}
+
 async function _saveAllBoardsToCloud() {
   if (!_currentUser) return false;
   // Snapshot active board's current pan/zoom into state before saving
@@ -2697,7 +2709,7 @@ async function _saveAllBoardsToCloud() {
         parentId: board.parentId || null,
         pan: board.pan || { x:0, y:0 },
         zoom: board.zoom || 1,
-        cards: board.cards || [],
+        cards: _stripBase64ForCloud(board.cards),
         arrows: board.arrows || [],
       }
     }));
@@ -3578,6 +3590,7 @@ async function handleFileUpload(file, targetCard, targetEl) {
     targetCard.content.fileId = fileId;
     targetCard.content.filename = file.name;
     targetCard.content.fileType = fileType;
+    // Store thumbnail as base64 initially for immediate display
     if (stored.thumbnail) targetCard.content.thumbnail = stored.thumbnail;
     if (targetEl) {
       targetEl.innerHTML = buildFileCardHTML(targetCard);
@@ -3589,6 +3602,19 @@ async function handleFileUpload(file, targetCard, targetEl) {
     }
     saveState();
     if (stored.url || stored.html) openFileViewer(stored, fileType);
+
+    // Upload thumbnail to Supabase Storage in background so it persists via URL
+    if (_currentUser && stored.thumbnail) {
+      try {
+        const thumbBlob = await (await fetch(stored.thumbnail)).blob();
+        const thumbFile = new File([thumbBlob], fileId + '-thumb.jpg', { type: 'image/jpeg' });
+        const url = await _uploadImage(thumbFile);
+        targetCard.content.thumbnail = url;
+        const thumbImg = targetEl?.querySelector('.file-card-thumb img');
+        if (thumbImg) thumbImg.src = url;
+        saveState();
+      } catch(_) { /* keep base64 thumbnail */ }
+    }
   }
 }
 
@@ -5077,18 +5103,14 @@ function _attachImagePanHandle(reposHandle, card, el) {
 
 function loadImageFile(file, card, el) {
   const reader = new FileReader();
-  reader.onload = async evt => {
+  reader.onload = evt => {
     const base64 = evt.target.result;
 
-    // Upload to Supabase Storage if logged in, otherwise fall back to base64
-    let finalSrc = base64;
-    if (_currentUser) {
-      try { finalSrc = await _uploadImage(file); } catch(e) { /* fall through */ }
-    }
-    card.content.src = finalSrc;
+    // Always render immediately with base64 — never block on upload
+    card.content.src = base64;
 
     const imgProbe = new Image();
-    imgProbe.onload = () => {
+    imgProbe.onload = async () => {
       let imgW = imgProbe.naturalWidth;
       let imgH = imgProbe.naturalHeight;
       const maxW = 400;
@@ -5103,10 +5125,11 @@ function loadImageFile(file, card, el) {
       el.style.width = card.w + 'px';
       el.style.height = card.h + 'px';
 
-      const display = el.querySelector('.image-display');
-      if (display) {
+      function renderDisplay(src) {
+        const display = el.querySelector('.image-display');
+        if (!display) return;
         display.className = 'image-display has-photo has-crop';
-        display.innerHTML = `<img src="${card.content.src}" style="width:${imgW}px;height:${imgH}px;left:0px;top:0px">
+        display.innerHTML = `<img src="${src}" style="width:${imgW}px;height:${imgH}px;left:0px;top:0px">
           <div class="img-reposition" title="Drag to pan">${_reposIconSVG}</div>
           <div class="image-caption" contenteditable="true">${card.content.caption || ''}</div>`;
         const rh = display.querySelector('.img-reposition');
@@ -5114,6 +5137,8 @@ function loadImageFile(file, card, el) {
         const cap = display.querySelector('.image-caption');
         if (cap) cap.addEventListener('input', () => { card.content.caption = cap.innerText; saveState(); });
       }
+
+      renderDisplay(base64);
 
       el.querySelector('.resize-handle')?.remove();
       if (!el.querySelector('.shape-corner-resize')) {
@@ -5132,9 +5157,20 @@ function loadImageFile(file, card, el) {
         });
       }
       saveState();
+
+      // Upload to Supabase in the background and swap out the base64 src
+      if (_currentUser) {
+        try {
+          const url = await _uploadImage(file);
+          card.content.src = url;
+          const imgEl = el.querySelector('.image-display img');
+          if (imgEl) imgEl.src = url;
+          saveState();
+        } catch(e) { /* keep base64 */ }
+      }
     };
     imgProbe.onerror = () => { refreshCardElement(card, el); saveState(); };
-    imgProbe.src = base64; // always use base64 for dimension probing
+    imgProbe.src = base64;
   };
   reader.readAsDataURL(file);
 }
