@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react'
 import { typewriterIn } from '../../utils/typewriter.js'
 import { usePage } from '../../context/PageContext.jsx'
 
-function ToolCard({ number, title, desc, tag, href, page: navPage }) {
+function ToolCard({ number, title, desc, tag, href, page: navPage, featured }) {
   const { navigate } = usePage()
   const handleOpen = () => {
     if (navPage) { navigate(navPage); return }
@@ -10,17 +10,20 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
   }
   const isLive = !!(href || navPage)
   return (
-    <div style={{ borderBottom: '1px solid var(--rule)', padding: '28px 0' }} className="anim">
+    <div style={{
+      borderBottom: '1px solid var(--rule)', padding: '28px 0',
+      ...(featured ? { background: 'var(--ink)', margin: '0 -32px', padding: '28px 32px' } : {})
+    }} className="anim">
       {/* Desktop layout: number | content | button */}
       <div className="tool-card-desktop" style={{ display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: '24px', alignItems: 'start' }}>
-        <span className="param-label" style={{ paddingTop: '4px' }}>{number}</span>
+        <span className="param-label" style={{ paddingTop: '4px', color: featured ? 'var(--bg)' : undefined }}>{number}</span>
         <div>
-          <div style={{ height: '1px', background: 'var(--rule)', marginBottom: '14px' }} />
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(22px, 3vw, 40px)', color: 'var(--ink)', letterSpacing: '0.02em', marginBottom: '8px', lineHeight: 1 }}>
+          <div style={{ height: '1px', background: featured ? 'rgba(255,255,255,0.15)' : 'var(--rule)', marginBottom: '14px' }} />
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(22px, 3vw, 40px)', color: featured ? 'var(--bg)' : 'var(--ink)', letterSpacing: '0.02em', marginBottom: '8px', lineHeight: 1 }}>
             {title}
           </div>
-          <p className="body body--sm" style={{ marginBottom: '10px' }}>{desc}</p>
-          <span className="param-label">{tag}</span>
+          <p className="body body--sm" style={{ marginBottom: '10px', color: featured ? 'rgba(255,255,255,0.65)' : undefined }}>{desc}</p>
+          <span className="param-label" style={{ color: featured ? 'rgba(255,255,255,0.45)' : undefined }}>{tag}</span>
         </div>
         {isLive ? (
           <button
@@ -30,8 +33,8 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
               fontSize: '10px',
               textTransform: 'uppercase',
               letterSpacing: '0.22em',
-              color: 'var(--bg)',
-              background: 'var(--ink)',
+              color: featured ? 'var(--ink)' : 'var(--bg)',
+              background: featured ? 'var(--bg)' : 'var(--ink)',
               border: 'none',
               padding: '12px 24px',
               cursor: 'pointer',
@@ -44,7 +47,7 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
             OPEN TOOL →
           </button>
         ) : (
-          <span style={{ fontFamily: 'var(--font-label)', fontSize: '10px', letterSpacing: '0.18em', color: 'var(--ink-faint)', textTransform: 'uppercase', whiteSpace: 'nowrap', paddingTop: '4px' }}>
+          <span style={{ fontFamily: 'var(--font-label)', fontSize: '10px', letterSpacing: '0.18em', color: featured ? 'rgba(255,255,255,0.35)' : 'var(--ink-faint)', textTransform: 'uppercase', whiteSpace: 'nowrap', paddingTop: '4px' }}>
             COMING SOON
           </span>
         )}
@@ -53,7 +56,7 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
       {/* Mobile layout: number + button on top, content below */}
       <div className="tool-card-mobile" style={{ display: 'none' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <span className="param-label">{number}</span>
+          <span className="param-label" style={{ color: featured ? 'var(--bg)' : undefined }}>{number}</span>
           {isLive ? (
             <button
               onClick={handleOpen}
@@ -62,8 +65,8 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
                 fontSize: '10px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.22em',
-                color: 'var(--bg)',
-                background: 'var(--ink)',
+                color: featured ? 'var(--ink)' : 'var(--bg)',
+                background: featured ? 'var(--bg)' : 'var(--ink)',
                 border: 'none',
                 padding: '10px 18px',
                 cursor: 'pointer',
@@ -76,17 +79,17 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
               OPEN TOOL →
             </button>
           ) : (
-            <span style={{ fontFamily: 'var(--font-label)', fontSize: '10px', letterSpacing: '0.18em', color: 'var(--ink-faint)', textTransform: 'uppercase' }}>
+            <span style={{ fontFamily: 'var(--font-label)', fontSize: '10px', letterSpacing: '0.18em', color: featured ? 'rgba(255,255,255,0.35)' : 'var(--ink-faint)', textTransform: 'uppercase' }}>
               COMING SOON
             </span>
           )}
         </div>
-        <div style={{ height: '1px', background: 'var(--rule)', marginBottom: '14px' }} />
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(22px, 7vw, 36px)', color: 'var(--ink)', letterSpacing: '0.02em', marginBottom: '8px', lineHeight: 1 }}>
+        <div style={{ height: '1px', background: featured ? 'rgba(255,255,255,0.15)' : 'var(--rule)', marginBottom: '14px' }} />
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(22px, 7vw, 36px)', color: featured ? 'var(--bg)' : 'var(--ink)', letterSpacing: '0.02em', marginBottom: '8px', lineHeight: 1 }}>
           {title}
         </div>
-        <p className="body body--sm" style={{ marginBottom: '10px' }}>{desc}</p>
-        <span className="param-label">{tag}</span>
+        <p className="body body--sm" style={{ marginBottom: '10px', color: featured ? 'rgba(255,255,255,0.65)' : undefined }}>{desc}</p>
+        <span className="param-label" style={{ color: featured ? 'rgba(255,255,255,0.45)' : undefined }}>{tag}</span>
       </div>
 
       <style>{`
@@ -102,6 +105,15 @@ function ToolCard({ number, title, desc, tag, href, page: navPage }) {
 const TOOLS = [
   {
     number: 'T — 001',
+    title: 'BRAND MOODBOARD',
+    desc: 'Infinite canvas for visual brand direction. Drop images, add notes, build colour palettes, and map out the look and feel of a brand — all in one place. No account needed.',
+    tag: 'CREATIVE / FREE / BETA',
+    href: '/canvas.html',
+    page: null,
+    featured: true,
+  },
+  {
+    number: 'T — 002',
     title: 'BRAND ARCHETYPE FINDER',
     desc: '10 questions. 3 archetypes. Answer honestly and get your primary archetype, a secondary layer, and the creative tension that gives your brand its edge.',
     tag: 'BRAND STRATEGY / FREE / ~5 MIN',
@@ -109,7 +121,7 @@ const TOOLS = [
     page: 'archetype-finder',
   },
   {
-    number: 'T — 002',
+    number: 'T — 003',
     title: 'BRAND ARCHETYPE DIRECTORY',
     desc: 'Browse all 100 archetypes across 17 categories. Learn the mythology, keywords, and real-world brands behind each one. Compare up to 3 side by side.',
     tag: 'BRAND STRATEGY / FREE / REFERENCE',
@@ -117,7 +129,7 @@ const TOOLS = [
     page: 'archetype-directory',
   },
   {
-    number: 'T — 003',
+    number: 'T — 004',
     title: 'POSITIONING STATEMENT BUILDER',
     desc: '7 inputs. 2 statement formats. Answer honestly and walk away with a Neumeier Onliness Statement and a full positioning statement — ready to use as your brand foundation document.',
     tag: 'BRAND STRATEGY / FREE / ~7 MIN',
@@ -125,20 +137,12 @@ const TOOLS = [
     page: 'positioning-builder',
   },
   {
-    number: 'T — 004',
+    number: 'T — 005',
     title: 'BRAND AUDIT CHECKLIST',
     desc: '20 checkpoints across 6 categories. Find the gaps between what you believe your brand communicates and what your audience actually experiences. Includes a priority fix list.',
     tag: 'BRAND STRATEGY / FREE / ~10 MIN',
     href: null,
     page: 'brand-audit',
-  },
-  {
-    number: 'T — 005',
-    title: 'BRAND MOODBOARD',
-    desc: 'Infinite canvas for visual brand direction. Drop images, add notes, build colour palettes, and map out the look and feel of a brand — all in one place. No account needed.',
-    tag: 'CREATIVE / FREE / BETA',
-    href: '/canvas.html',
-    page: null,
   },
 ]
 

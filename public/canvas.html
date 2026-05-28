@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>moodboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=Syne:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Bricolage+Grotesque:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
@@ -60,13 +61,25 @@ html, body {
 
 .tb-left { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
 .tb-center { display: none; }
-.tb-right { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; }
+.tb-right { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: flex-end; }
 
-.app-brand { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-.app-icon { width: 26px; height: 26px; }
-.app-wordmark { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; color: #EFEDE7; }
+.app-brand { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.app-icon { width: 24px; height: 24px; }
+.app-wordmark { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: #EFEDE7; display: flex; align-items: baseline; gap: 5px; }
+.app-by { font-size: 12px; font-weight: 400; color: rgba(239,237,231,0.50); }
+.app-credit { color: rgba(239,237,231,0.70); text-decoration: none; transition: color 150ms; }
+.app-credit:hover { color: #EFEDE7; text-decoration: underline; text-underline-offset: 2px; }
 
-.tb-sep { width: 1px; height: 20px; background: rgba(239,237,231,0.30); margin: 0 8px; flex-shrink: 0; }
+.tb-sep { width: 1px; height: 18px; background: rgba(239,237,231,0.22); margin: 0 6px; flex-shrink: 0; }
+
+.tb-ghost-btn {
+  height: 28px; padding: 0 10px;
+  background: none; border: none; border-radius: 6px;
+  font-family: inherit; font-size: 12px; font-weight: 500; color: rgba(239,237,231,0.65);
+  cursor: pointer; transition: color 100ms, background 100ms;
+  white-space: nowrap;
+}
+.tb-ghost-btn:hover { color: #EFEDE7; background: rgba(239,237,231,0.10); }
 
 .board-name-wrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .board-name {
@@ -174,6 +187,65 @@ html, body {
 .dock-drag-ghost svg { width: 18px; height: 18px; }
 .dock-drag-drop-zone { outline: 2px dashed rgba(201,16,46,0.5); outline-offset: -4px; }
 
+/* ── MOBILE MORE MENU ── */
+#mobile-more-menu {
+  display: none; position: fixed; top: 56px; right: 8px; z-index: 2000;
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.07);
+  padding: 6px; min-width: 180px;
+  animation: badge-in 0.18s var(--ease-out);
+}
+#mobile-more-menu.open { display: block; }
+.mmm-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 8px;
+  font-size: 14px; color: #1a1a1a; cursor: pointer;
+  transition: background 100ms;
+}
+.mmm-item:hover, .mmm-item:active { background: #f5f5f5; }
+.mmm-item svg { flex-shrink: 0; opacity: 0.6; }
+.mmm-sep { height: 1px; background: #f0f0f0; margin: 4px 0; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  /* Toolbar: strip non-essential items, show ··· instead */
+  #toolbar { padding: 0 10px; gap: 0; }
+  .app-by, .breadcrumb, .tb-sep, #save-status { display: none !important; }
+  #export-btn, #import-btn, #download-board-btn { display: none !important; }
+  #undo-btn, #redo-btn { display: none !important; }
+  #zoom-label { display: none; }
+  .zoom-group { border: none; background: none; gap: 0; }
+  .zoom-btn { width: 32px; height: 32px; }
+  .board-name { max-width: 110px; font-size: 13px; }
+  .app-wordmark { font-size: 13px; }
+  #mobile-more-btn { display: flex !important; }
+
+  /* Bottom dock: stick to bottom, scroll horizontally */
+  #bottom-dock {
+    left: 0; right: 0; bottom: 0;
+    transform: none;
+    border-radius: 16px 16px 0 0;
+    padding: 6px 10px env(safe-area-inset-bottom, 10px);
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: none;
+    gap: 0;
+    justify-content: flex-start;
+    box-shadow: 0 -4px 24px rgba(100,5,20,0.22);
+  }
+  #bottom-dock::-webkit-scrollbar { display: none; }
+  .dock-btn { width: 56px; flex-shrink: 0; padding: 6px 4px 4px; }
+
+  /* Canvas: account for taller dock */
+  #canvas-viewport { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Comments FAB: nudge above dock */
+  #comments-fab { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Signup CTA: above dock */
+  #signup-cta-bar { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); flex-direction: column; gap: 8px; padding: 10px 16px; }
+}
+
 /* ── CANVAS ── */
 #canvas-viewport {
   position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
@@ -266,9 +338,10 @@ html, body {
   color: var(--text-primary); word-break: break-word; cursor: text; flex: 1;
   letter-spacing: -0.008em;
 }
-.note-content:empty::before {
+.note-content:empty::before,
+.note-content.is-empty::before {
   content: attr(data-placeholder);
-  color: var(--text-tertiary); pointer-events: none; font-weight: 400;
+  opacity: 0.4; pointer-events: none; font-weight: 400;
 }
 
 /* Todo card */
@@ -635,7 +708,7 @@ html, body {
   min-height: 24px; outline: none; font-size: 13px; line-height: 1.55;
   color: var(--text-primary); word-break: break-word; cursor: text;
 }
-.section-child-body .note-content:empty::before { content: attr(data-placeholder); color: var(--text-tertiary); pointer-events: none; }
+.section-child-body .note-content:empty::before { content: attr(data-placeholder); opacity: 0.4; pointer-events: none; }
 .section-child-body .todo-title {
   font-size: 13px; font-weight: 600; color: var(--text-primary);
   outline: none; margin-bottom: 6px; cursor: text;
@@ -1402,7 +1475,6 @@ html, body {
   border-radius: 14px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
   padding: 14px; width: 296px; display: none; z-index: 3000;
-  overflow: visible;
 }
 .sp-title {
   font-size: 11px; font-weight: 600; text-transform: uppercase;
@@ -1508,9 +1580,506 @@ html, body {
 [data-theme="dark"] .link-screenshot { border-bottom-color: rgba(239,237,231,0.10); }
 [data-theme="dark"] .link-empty,
 [data-theme="dark"] .link-loading { color: rgba(239,237,231,0.45); }
+
+/* ── AUTH OVERLAY ── */
+#auth-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: #EFEDE7;
+  display: flex; align-items: center; justify-content: center;
+}
+#auth-card {
+  background: #fff; border-radius: 16px; padding: 40px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 8px 40px rgba(100,5,20,0.16);
+}
+#auth-logo {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 28px;
+  font-size: 20px; font-weight: 600; letter-spacing: -0.02em;
+  color: var(--brand-red);
+}
+#auth-tabs {
+  display: flex; gap: 4px; margin-bottom: 20px;
+  border-bottom: 1px solid var(--separator);
+}
+.auth-tab {
+  flex: 1; padding: 8px; background: none; border: none;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  color: var(--text-secondary); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color 150ms, border-color 150ms;
+}
+.auth-tab.auth-tab--active { color: var(--brand-red); border-bottom-color: var(--brand-red); }
+#auth-error {
+  font-size: 12px; color: #c53030; margin-bottom: 6px;
+  display: none; background: rgba(197,48,48,0.08); padding: 8px 10px;
+  border-radius: 6px;
+}
+#auth-form { display: flex; flex-direction: column; gap: 10px; }
+#auth-form input {
+  width: 100%; padding: 10px 14px;
+  border: 1.5px solid var(--separator); border-radius: 8px;
+  font-family: inherit; font-size: 14px; color: #1a1a1a;
+  background: #faf9f6; outline: none; transition: border-color 150ms;
+  box-sizing: border-box;
+}
+#auth-form input:focus { border-color: var(--brand-red); }
+#auth-submit {
+  width: 100%; padding: 11px;
+  background: var(--brand-red); color: #EFEDE7;
+  border: none; border-radius: 8px;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: opacity 150ms; margin-top: 4px;
+}
+#auth-submit:hover { opacity: 0.88; }
+#auth-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#auth-guest-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0 2px;
+  color: rgba(201,16,46,0.30); font-size: 12px;
+}
+#auth-guest-divider::before, #auth-guest-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(201,16,46,0.15);
+}
+#auth-guest-btn {
+  width: 100%; padding: 11px;
+  background: transparent; color: rgba(201,16,46,0.70);
+  border: 1.5px solid rgba(201,16,46,0.25); border-radius: 8px;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 150ms;
+  letter-spacing: 0.01em;
+}
+#auth-guest-btn:hover { color: var(--brand-red); border-color: rgba(201,16,46,0.55); background: rgba(201,16,46,0.04); }
+
+#guest-save-btn {
+  font-size: 11px; font-family: inherit;
+  background: none; border: none; cursor: pointer;
+  color: rgba(239,237,231,0.55); letter-spacing: 0.01em;
+  padding: 0; transition: color 150ms;
+  white-space: nowrap;
+}
+#guest-save-btn:hover { color: #EFEDE7; }
+
+/* ── USER BUTTON ── */
+#user-btn-wrap { position: relative; display: none; }
+#user-btn {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(239,237,231,0.18); border: none; border-radius: 20px;
+  padding: 4px 10px 4px 4px; cursor: pointer; color: #EFEDE7;
+  font-family: inherit; font-size: 12px; font-weight: 500;
+  transition: background 150ms;
+}
+#user-btn:hover { background: rgba(239,237,231,0.28); }
+#user-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #EFEDE7; color: var(--brand-red);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+  overflow: hidden;
+}
+#user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+#user-dropdown {
+  position: absolute; right: 0; top: calc(100% + 8px);
+  background: #EFEDE7; border-radius: 10px;
+  box-shadow: var(--shadow-3); min-width: 210px; z-index: 500;
+  overflow: hidden; display: none;
+}
+#user-dropdown-name { padding: 12px 14px 2px; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+#user-dropdown-email { padding: 0 14px 10px; font-size: 11px; color: var(--text-secondary); }
+#user-dropdown hr { border: none; border-top: 1px solid var(--separator); margin: 0; }
+#signout-btn {
+  width: 100%; padding: 10px 14px; background: none; border: none;
+  font-family: inherit; font-size: 13px; color: var(--text-primary);
+  text-align: left; cursor: pointer;
+}
+#signout-btn:hover { background: rgba(201,16,46,0.07); }
+
+/* ── SAVE STATUS ── */
+#save-status {
+  font-size: 11px; color: rgba(239,237,231,0.45);
+  letter-spacing: 0.01em; min-width: 50px; text-align: right;
+}
+
+/* ── SHARE MODAL ── */
+#share-modal {
+  position: fixed; inset: 0; z-index: 3000;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.45);
+}
+#share-modal.open { display: flex; }
+.share-card {
+  background: #fff; border-radius: 16px;
+  width: 460px; max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px); overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+  padding: 28px 28px 24px; position: relative;
+}
+.share-close-btn {
+  position: absolute; top: 14px; right: 16px;
+  background: none; border: none; font-size: 18px; line-height: 1;
+  cursor: pointer; color: #aaa; padding: 4px 8px; border-radius: 6px;
+}
+.share-close-btn:hover { background: #f5f5f5; color: #333; }
+.share-card h2 { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 22px; }
+.share-section { padding-top: 18px; margin-top: 18px; border-top: 1px solid #f0f0f0; }
+.share-section:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.share-section-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.07em; color: #999; margin-bottom: 10px;
+}
+.share-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.share-input {
+  flex: 1; padding: 9px 12px; border: 1px solid #e4e4e4;
+  border-radius: 8px; font-size: 13px; font-family: inherit; outline: none;
+}
+.share-input:focus { border-color: #C9102E; box-shadow: 0 0 0 3px rgba(201,16,46,0.08); }
+.share-select {
+  padding: 9px 10px; border: 1px solid #e4e4e4; border-radius: 8px;
+  font-size: 13px; font-family: inherit; outline: none; background: #fff; cursor: pointer;
+}
+.share-select:focus { border-color: #C9102E; }
+.share-btn {
+  padding: 9px 16px; background: #C9102E; color: #fff; border: none;
+  border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+.share-btn:hover { opacity: 0.88; }
+.share-link-box {
+  display: flex; gap: 8px; align-items: center;
+  background: #f8f8f8; border-radius: 8px; padding: 10px 12px; margin-top: 8px;
+}
+.share-link-url {
+  flex: 1; font-size: 12px; color: #666;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.copy-link-btn {
+  padding: 5px 12px; background: #C9102E; color: #fff; border: none;
+  border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;
+  font-family: inherit; white-space: nowrap; flex-shrink: 0;
+}
+.copy-link-btn:hover { opacity: 0.88; }
+.share-note { font-size: 12px; color: #999; margin-top: 6px; line-height: 1.5; }
+.share-error { font-size: 12px; color: #C9102E; margin-top: 6px; display: none; }
+.share-toggle-row {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;
+}
+.share-toggle-label { font-size: 14px; color: #333; }
+.share-toggle {
+  position: relative; width: 40px; height: 22px; background: #ddd;
+  border-radius: 11px; cursor: pointer; transition: background 0.18s; flex-shrink: 0;
+}
+.share-toggle.on { background: #C9102E; }
+.share-toggle-knob {
+  position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  background: #fff; border-radius: 50%; transition: transform 0.18s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.22);
+}
+.share-toggle.on .share-toggle-knob { transform: translateX(18px); }
+.member-list { margin-top: 12px; }
+.member-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid #f5f5f5;
+}
+.member-item:last-child { border-bottom: none; }
+.member-avatar {
+  width: 28px; height: 28px; border-radius: 50%; background: #C9102E;
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; flex-shrink: 0;
+}
+.member-info { flex: 1; min-width: 0; }
+.member-name { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+.member-role { font-size: 11px; color: #999; }
+.member-remove-btn {
+  padding: 4px 10px; background: none; border: 1px solid #e4e4e4;
+  border-radius: 6px; font-size: 11px; color: #888; cursor: pointer;
+  font-family: inherit;
+}
+.member-remove-btn:hover { border-color: #C9102E; color: #C9102E; }
+
+/* ── SHARE LINK BOX (redesigned) ── */
+.share-link-display {
+  background: #f5f5f5; border-radius: 10px; padding: 12px 14px;
+  margin-top: 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.share-link-row { display: flex; gap: 8px; align-items: center; }
+.share-link-url { flex: 1; font-size: 12px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: monospace; }
+.copy-link-btn {
+  padding: 7px 14px; background: #C9102E; color: #fff; border: none;
+  border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: inherit; white-space: nowrap; flex-shrink: 0;
+  transition: opacity 150ms;
+}
+.copy-link-btn:hover { opacity: 0.88; }
+.share-role-row { display: flex; align-items: center; justify-content: space-between; }
+.share-role-label { font-size: 13px; color: #444; }
+.share-toggle-sm {
+  position: relative; width: 34px; height: 19px; background: #ddd;
+  border-radius: 10px; cursor: pointer; transition: background 0.18s; flex-shrink: 0;
+}
+.share-toggle-sm.on { background: #C9102E; }
+.share-toggle-sm-knob {
+  position: absolute; top: 3px; left: 3px; width: 13px; height: 13px;
+  background: #fff; border-radius: 50%; transition: transform 0.18s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.22);
+}
+.share-toggle-sm.on .share-toggle-sm-knob { transform: translateX(15px); }
+
+/* ── READ-ONLY MODE ── */
+body.is-readonly .card { pointer-events: none !important; }
+body.is-readonly #bottom-dock { opacity: 0.35; pointer-events: none; }
+body.is-readonly #undo-btn, body.is-readonly #redo-btn,
+body.is-readonly #share-btn, body.is-readonly #export-btn,
+body.is-readonly #import-btn { display: none; }
+body.is-readonly #save-status, body.is-readonly #guest-save-btn,
+body.is-readonly #user-btn-wrap { display: none !important; }
+body.is-readonly #download-board-btn { display: inline-flex !important; }
+
+#readonly-badge {
+  position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
+  background: rgba(20,20,20,0.88); color: #fff; backdrop-filter: blur(8px);
+  border-radius: 12px; padding: 14px 20px; z-index: 2000;
+  display: none; max-width: 340px; width: calc(100vw - 32px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  animation: badge-in 0.25s var(--ease-out);
+}
+#signup-cta-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #C42B2B; color: #EDE8DC;
+  display: none; align-items: center; justify-content: center; gap: 16px;
+  padding: 12px 24px; z-index: 1500;
+  font-family: var(--font-ui, system-ui, sans-serif); font-size: 13px;
+}
+body.is-readonly #signup-cta-bar { display: flex; }
+.signup-cta-text { opacity: 0.9; }
+.signup-cta-btn {
+  background: #EDE8DC; color: #C42B2B; border: none;
+  padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; font-family: inherit;
+  transition: opacity 0.15s;
+}
+.signup-cta-btn:hover { opacity: 0.85; }
+#readonly-badge.show { display: flex; align-items: flex-start; gap: 12px; }
+@keyframes badge-in { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.readonly-badge-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.readonly-badge-body { flex: 1; }
+.readonly-badge-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.readonly-badge-sub { font-size: 13px; opacity: 0.75; line-height: 1.4; }
+.readonly-badge-dismiss {
+  background: rgba(255,255,255,0.18); border: none; color: #fff;
+  border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 500;
+  cursor: pointer; font-family: inherit; white-space: nowrap; align-self: flex-start; flex-shrink: 0;
+}
+.readonly-badge-dismiss:hover { background: rgba(255,255,255,0.28); }
+
+/* ── COMMENTS PANEL ── */
+#comments-fab {
+  position: fixed; bottom: 90px; right: 20px; z-index: 900;
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #C9102E; color: #EFEDE7; border: none; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(100,5,20,0.35);
+  transition: transform 150ms var(--spring), opacity 150ms;
+}
+#comments-fab:hover { transform: scale(1.08); }
+#comments-fab.show { display: flex; }
+#comments-fab .fab-count {
+  position: absolute; top: -4px; right: -4px;
+  background: #fff; color: #C9102E; border-radius: 10px;
+  font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
+  display: none; align-items: center; justify-content: center; padding: 0 4px;
+}
+#comments-fab .fab-count.has { display: flex; }
+#comments-panel {
+  position: fixed; bottom: 90px; right: 20px; z-index: 901;
+  width: 300px; max-height: 420px;
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  display: none; flex-direction: column;
+}
+#comments-panel.open { display: flex; }
+#comments-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0;
+}
+#comments-panel-header span { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.comments-close-btn { background: none; border: none; cursor: pointer; color: #aaa; font-size: 16px; padding: 2px 6px; border-radius: 5px; }
+.comments-close-btn:hover { color: #333; background: #f5f5f5; }
+#comments-list {
+  flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px;
+}
+#comments-list:empty::before { content: 'No comments yet. Be the first!'; font-size: 13px; color: #bbb; text-align: center; padding: 20px 0; }
+.comment-item { background: #f9f9f9; border-radius: 10px; padding: 10px 12px; }
+.comment-author { font-size: 12px; font-weight: 600; color: #C9102E; margin-bottom: 3px; }
+.comment-body { font-size: 13px; color: #333; line-height: 1.45; word-break: break-word; }
+.comment-time { font-size: 11px; color: #bbb; margin-top: 4px; }
+#comments-form { padding: 12px 16px 14px; border-top: 1px solid #f0f0f0; flex-shrink: 0; display: flex; flex-direction: column; gap: 7px; }
+#comment-name-input {
+  padding: 7px 10px; border: 1px solid #e4e4e4; border-radius: 7px;
+  font-size: 12px; font-family: inherit; outline: none;
+}
+#comment-name-input:focus { border-color: #C9102E; }
+#comment-body-input {
+  padding: 8px 10px; border: 1px solid #e4e4e4; border-radius: 7px;
+  font-size: 13px; font-family: inherit; outline: none; resize: none;
+  min-height: 60px; line-height: 1.4;
+}
+#comment-body-input:focus { border-color: #C9102E; }
+#comment-submit-btn {
+  padding: 8px; background: #C9102E; color: #fff; border: none;
+  border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: inherit;
+}
+#comment-submit-btn:hover { opacity: 0.88; }
 </style>
 </head>
 <body>
+
+<!-- AUTH OVERLAY -->
+<div id="auth-overlay">
+  <div id="auth-card">
+    <div id="auth-logo">
+      <svg viewBox="0 0 26 26" fill="none" width="30" height="30">
+        <rect x="2" y="2" width="10" height="10" rx="3" fill="#C9102E"/>
+        <rect x="14" y="2" width="10" height="10" rx="3" fill="#C9102E" opacity="0.60"/>
+        <rect x="2" y="14" width="10" height="10" rx="3" fill="#C9102E" opacity="0.60"/>
+        <rect x="14" y="14" width="10" height="10" rx="3" fill="#C9102E" opacity="0.35"/>
+      </svg>
+      moodboard
+    </div>
+    <div id="auth-tabs">
+      <button class="auth-tab auth-tab--active" data-mode="signin">Sign In</button>
+      <button class="auth-tab" data-mode="signup">Sign Up</button>
+    </div>
+    <div id="auth-error"></div>
+    <form id="auth-form">
+      <input id="auth-name" type="text" placeholder="Your name" autocomplete="name" style="display:none">
+      <input id="auth-email" type="email" placeholder="Email address" autocomplete="email" required>
+      <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password" required>
+      <button id="auth-submit" type="submit">Sign In</button>
+    </form>
+    <div id="auth-guest-divider">or</div>
+    <button id="auth-guest-btn">Continue as guest →</button>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div id="share-modal">
+  <div class="share-card">
+    <button class="share-close-btn" id="share-close">✕</button>
+    <h2>Share</h2>
+
+    <!-- Board share link -->
+    <div class="share-section" style="margin-top:0;padding-top:0;border-top:none">
+      <div class="share-toggle-row" style="margin-bottom:0">
+        <span class="share-section-label" style="margin-bottom:0">Board link</span>
+        <div class="share-toggle" id="board-share-toggle"><div class="share-toggle-knob"></div></div>
+      </div>
+      <div id="board-link-box" style="display:none">
+        <div class="share-link-display">
+          <div class="share-link-row">
+            <span class="share-link-url" id="board-share-url"></span>
+            <button class="copy-link-btn" id="copy-board-link">Copy link</button>
+          </div>
+          <div class="share-role-row">
+            <span class="share-role-label">View only</span>
+            <div class="share-toggle-sm" id="board-role-toggle"><div class="share-toggle-sm-knob"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments from view-only visitors -->
+    <div class="share-section" id="share-comments-section" style="display:none">
+      <div class="share-section-label">Comments</div>
+      <div id="share-comments-list" style="margin-top:10px;display:flex;flex-direction:column;gap:10px;max-height:220px;overflow-y:auto"></div>
+      <p id="share-comments-empty" style="font-size:13px;color:#bbb;margin:8px 0 0">No comments yet.</p>
+    </div>
+
+    <!-- Workspace invites -->
+    <div class="share-section">
+      <div class="share-section-label">Invite to workspace</div>
+      <p class="share-note" style="margin-top:0;margin-bottom:10px">Invited members can view and edit all boards in your workspace.</p>
+      <div class="share-row">
+        <input id="invite-email" class="share-input" type="email" placeholder="colleague@example.com">
+        <select id="invite-role" class="share-select">
+          <option value="editor">Editor</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <button class="share-btn" id="invite-generate-btn">Invite</button>
+      </div>
+      <div id="invite-link-box" class="share-link-box" style="display:none">
+        <span class="share-link-url" id="invite-link-url"></span>
+        <button class="copy-link-btn" id="copy-invite-link">Copy</button>
+      </div>
+      <p class="share-note" id="invite-note" style="display:none">Copy this link and send it. It expires in 7 days and can only be used once.</p>
+      <div class="share-error" id="invite-error"></div>
+      <div class="member-list" id="member-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- READ-ONLY BADGE -->
+<div id="readonly-badge">
+  <span class="readonly-badge-icon">🔒</span>
+  <div class="readonly-badge-body">
+    <div class="readonly-badge-title">View only</div>
+    <div class="readonly-badge-sub">You can browse this board and leave comments below.</div>
+  </div>
+  <button class="readonly-badge-dismiss" id="readonly-badge-dismiss">Got it</button>
+</div>
+
+<div id="signup-cta-bar">
+  <span class="signup-cta-text">Like what you see? Build your own moodboards for free.</span>
+  <button class="signup-cta-btn" id="signup-cta-btn">Get started →</button>
+</div>
+
+<div id="mobile-more-menu">
+  <div class="mmm-item" id="mmm-undo">
+    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7a5 5 0 1 0 1.5-3.5"/><path d="M3 3.5V7h3.5"/></svg>
+    Undo
+  </div>
+  <div class="mmm-item" id="mmm-redo">
+    <svg width="16" height="16" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 7a5 5 0 1 1-1.5-3.5"/><path d="M12 3.5V7H8.5"/></svg>
+    Redo
+  </div>
+  <div class="mmm-sep"></div>
+  <div class="mmm-item" id="mmm-export-png">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="2" width="12" height="12" rx="2"/><circle cx="5.5" cy="5.5" r="1"/><path d="M2 11l3.5-3.5 2.5 2.5 1.5-1.5 3 3"/></svg>
+    Export PNG
+  </div>
+  <div class="mmm-item" id="mmm-export-json">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 12V4M5 9l3 3 3-3"/><path d="M3 14h10"/></svg>
+    Export JSON
+  </div>
+  <div class="mmm-item" id="mmm-import">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 4v8M5 9l3 3 3-3" transform="rotate(180 8 8)"/><path d="M3 14h10"/></svg>
+    Import JSON
+  </div>
+  <div class="mmm-sep"></div>
+  <div class="mmm-item" id="mmm-save-status-row">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M13 5l-6 6-3-3"/></svg>
+    <span id="mmm-save-label">Saved</span>
+  </div>
+</div>
+
+<!-- COMMENTS FAB + PANEL -->
+<button id="comments-fab" title="Comments">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 10c0 3.866-3.134 7-7 7a7.04 7.04 0 0 1-2.5-.457L3 18l1.457-4.5A6.961 6.961 0 0 1 3 10c0-3.866 3.134-7 7-7s7 3.134 7 7Z"/></svg>
+  <span class="fab-count" id="comments-count">0</span>
+</button>
+<div id="comments-panel">
+  <div id="comments-panel-header">
+    <span>Comments</span>
+    <button class="comments-close-btn" id="comments-panel-close">✕</button>
+  </div>
+  <div id="comments-list"></div>
+  <div id="comments-form">
+    <input id="comment-name-input" placeholder="Your name (optional)">
+    <textarea id="comment-body-input" placeholder="Leave a comment…"></textarea>
+    <button id="comment-submit-btn">Post comment</button>
+  </div>
+</div>
 
 <!-- TOOLBAR -->
 <div id="toolbar">
@@ -1522,7 +2091,10 @@ html, body {
         <rect x="2" y="14" width="10" height="10" rx="3" fill="#EFEDE7" opacity="0.60"/>
         <rect x="14" y="14" width="10" height="10" rx="3" fill="#EFEDE7" opacity="0.35"/>
       </svg>
-      <span class="app-wordmark">moodboard</span>
+      <span class="app-wordmark">
+        Moodboard
+        <span class="app-by">by <a href="https://ezradom.com" target="_blank" rel="noopener" class="app-credit">EzraDom</a></span>
+      </span>
     </div>
     <div class="tb-sep"></div>
     <div class="board-name-wrap">
@@ -1539,8 +2111,11 @@ html, body {
       <button class="zoom-btn" id="zoom-out" title="Zoom out (⌘−)">−</button>
       <span id="zoom-label">100%</span>
       <button class="zoom-btn" id="zoom-in" title="Zoom in (⌘+)">+</button>
+      <div style="width:1px;height:14px;background:rgba(239,237,231,0.20);margin:0 2px"></div>
+      <button class="zoom-btn" id="fit-btn" title="Fit to screen (⌘0)" style="width:32px">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 4.5V1.5h3M9 1.5h3v3M12 8.5v3H9M4 11.5H1v-3"/></svg>
+      </button>
     </div>
-    <button class="tb-action-btn" id="fit-btn" title="Fit to screen (⌘0)">⌘ Fit</button>
     <div class="tb-sep"></div>
     <button class="tb-icon-btn" id="undo-btn" title="Undo (⌘Z)" disabled>
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 7a5 5 0 1 0 1.5-3.5"/><path d="M3 3.5V7h3.5"/></svg>
@@ -1549,9 +2124,29 @@ html, body {
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 7a5 5 0 1 1-1.5-3.5"/><path d="M12 3.5V7H8.5"/></svg>
     </button>
     <div class="tb-sep"></div>
-    <button class="tb-action-btn" id="export-btn">Export ▾</button>
-    <button class="tb-action-btn" id="import-btn">Import</button>
+    <button class="tb-action-btn primary" id="share-btn">Share</button>
+    <button class="tb-ghost-btn" id="export-btn">Export ▾</button>
+    <button class="tb-ghost-btn" id="import-btn">Import</button>
+    <button class="tb-ghost-btn" id="download-board-btn" style="display:none">↓ Download</button>
+    <button class="tb-icon-btn" id="mobile-more-btn" style="display:none" title="More">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="2" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="14" cy="8" r="1.5"/></svg>
+    </button>
     <input type="file" id="import-file" accept=".json" style="display:none">
+    <div class="tb-sep"></div>
+    <span id="save-status"></span>
+    <button id="guest-save-btn" style="display:none">Sign up to save ↑</button>
+    <div id="user-btn-wrap">
+      <button id="user-btn">
+        <div id="user-avatar"></div>
+        <span id="user-name-display"></span>
+      </button>
+      <div id="user-dropdown">
+        <div id="user-dropdown-name"></div>
+        <div id="user-dropdown-email"></div>
+        <hr>
+        <button id="signout-btn">Sign Out</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1849,6 +2444,691 @@ html, body {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script>
+// ── SUPABASE ──
+const _SUPA_URL = 'https://xhjfxypbsdgikfnaoedq.supabase.co';
+const _SUPA_KEY = 'sb_publishable_gGcYWO12yZ_xZEVeF7KNCA_xXVXa54-';
+const _sb = window.supabase.createClient(_SUPA_URL, _SUPA_KEY);
+
+let _currentUser = null;
+let _isGuest = false;
+let _cloudSaveTimer = null;
+
+// ── AUTH UI ──
+function _showAuth(msg) {
+  document.getElementById('auth-overlay').style.display = 'flex';
+  if (msg) { _setAuthError(''); _setAuthMode('signup'); document.getElementById('auth-error').textContent = msg; document.getElementById('auth-error').style.display = 'block'; }
+}
+function _hideAuth() { document.getElementById('auth-overlay').style.display = 'none'; }
+
+function _bootGuest() {
+  _isGuest = true;
+  const lsRaw = localStorage.getItem('moodboard-state');
+  if (lsRaw) {
+    try {
+      const ls = JSON.parse(lsRaw);
+      if (ls.boards) { state.boards = ls.boards; state.activeBoard = ls.activeBoard || Object.keys(ls.boards)[0]; state.theme = ls.theme || []; }
+    } catch(e) {}
+  }
+  _hideAuth();
+  const b = state.boards[state.activeBoard];
+  if (b) { pan = { ...b.pan }; zoom = b.zoom || 1; }
+  renderBoard();
+  initColorPicker();
+  if (activeBoard().cards.length === 0) {
+    pan.x = viewport.offsetWidth / 2 - 100;
+    pan.y = viewport.offsetHeight / 2 - 50;
+    applyTransform(false);
+  }
+  document.getElementById('guest-save-btn').style.display = 'block';
+}
+
+document.getElementById('auth-guest-btn').addEventListener('click', () => _bootGuest());
+document.getElementById('guest-save-btn').addEventListener('click', () => {
+  _showAuth('Create a free account to save your work to the cloud.');
+});
+
+function _setAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+}
+
+let _authMode = 'signin';
+function _setAuthMode(mode) {
+  _authMode = mode;
+  document.querySelectorAll('.auth-tab').forEach(t =>
+    t.classList.toggle('auth-tab--active', t.dataset.mode === mode)
+  );
+  const nameEl = document.getElementById('auth-name');
+  const submitEl = document.getElementById('auth-submit');
+  const pwdEl = document.getElementById('auth-password');
+  if (mode === 'signup') {
+    nameEl.style.display = ''; nameEl.required = true;
+    submitEl.textContent = 'Create Account';
+    pwdEl.autocomplete = 'new-password';
+  } else {
+    nameEl.style.display = 'none'; nameEl.required = false;
+    submitEl.textContent = 'Sign In';
+    pwdEl.autocomplete = 'current-password';
+  }
+  _setAuthError('');
+}
+
+document.querySelectorAll('.auth-tab').forEach(t =>
+  t.addEventListener('click', () => _setAuthMode(t.dataset.mode))
+);
+
+document.getElementById('auth-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const name = document.getElementById('auth-name').value.trim();
+  _setAuthError('');
+  const btn = document.getElementById('auth-submit');
+  btn.disabled = true;
+  try {
+    if (_authMode === 'signup') {
+      const displayName = name || email.split('@')[0];
+      const { data, error } = await _sb.auth.signUp({
+        email, password,
+        options: { data: { full_name: displayName } }
+      });
+      if (error) throw error;
+      if (data.session) {
+        // Email confirmation is off — signed in immediately
+        if (data.user) {
+          await _sb.from('profiles').upsert({ id: data.user.id, display_name: displayName });
+        }
+        // onAuthStateChange will fire SIGNED_IN and boot the app
+      } else {
+        // Email confirmation is on — tell the user to check their inbox
+        _setAuthError('');
+        document.getElementById('auth-submit').textContent = '✓ Check your email to confirm your account';
+        btn.disabled = true;
+      }
+    } else {
+      const { error } = await _sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+  } catch(err) {
+    _setAuthError(err.message || 'Something went wrong');
+    btn.disabled = false;
+  } finally {
+    if (_authMode !== 'signup') btn.disabled = false;
+  }
+});
+
+
+// ── USER UI ──
+function _updateUserUI() {
+  if (!_currentUser) return;
+  const meta = _currentUser.user_metadata || {};
+  const name = meta.full_name || meta.name || _currentUser.email?.split('@')[0] || 'You';
+  const avatarEl = document.getElementById('user-avatar');
+  if (meta.avatar_url) {
+    avatarEl.innerHTML = `<img src="${meta.avatar_url}" alt="">`;
+  } else {
+    avatarEl.textContent = name[0].toUpperCase();
+  }
+  document.getElementById('user-name-display').textContent = name.split(' ')[0];
+  document.getElementById('user-dropdown-name').textContent = name;
+  document.getElementById('user-dropdown-email').textContent = _currentUser.email || '';
+  document.getElementById('user-btn-wrap').style.display = 'flex';
+  document.getElementById('guest-save-btn').style.display = 'none';
+  _isGuest = false;
+}
+
+document.getElementById('user-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const dd = document.getElementById('user-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#user-btn-wrap')) {
+    document.getElementById('user-dropdown').style.display = 'none';
+  }
+});
+document.getElementById('signout-btn').addEventListener('click', async () => {
+  await _sb.auth.signOut();
+  document.getElementById('user-btn-wrap').style.display = 'none';
+  state = { boards: { root: { id:'root', name:'Home', parentId:null, pan:{x:0,y:0}, zoom:1, cards:[], arrows:[] } }, activeBoard:'root', theme:[] };
+  _showAuth();
+});
+
+// ── SAVE STATUS ──
+function _setSaveStatus(s) {
+  const el = document.getElementById('save-status');
+  if (el) el.textContent = s;
+}
+
+// ── CLOUD SAVE ──
+function _genBoardId() {
+  return (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+}
+
+async function _saveAllBoardsToCloud() {
+  if (!_currentUser) return false;
+  // Snapshot active board's current pan/zoom into state before saving
+  const ab = state.boards[state.activeBoard];
+  if (ab) { ab.pan = { ...pan }; ab.zoom = zoom; }
+
+  const rows = Object.values(state.boards)
+    .filter(board => !board._ownerId || board._ownerId === _currentUser.id)
+    .map(board => ({
+      id: board.id,
+      owner_id: _currentUser.id,
+      title: board.name || 'Untitled',
+      workspace_id: board._workspaceId || _workspaceId || null,
+      data: {
+        parentId: board.parentId || null,
+        pan: board.pan || { x:0, y:0 },
+        zoom: board.zoom || 1,
+        cards: board.cards || [],
+        arrows: board.arrows || [],
+      }
+    }));
+
+  _setSaveStatus('Saving…');
+  try {
+    const { error } = await _sb.from('boards').upsert(rows, { onConflict: 'id' });
+    if (error) throw error;
+    _setSaveStatus('Saved');
+    setTimeout(() => _setSaveStatus(''), 2000);
+    return true;
+  } catch(err) {
+    const msg = err.message || JSON.stringify(err);
+    _setSaveStatus('⚠ ' + msg);
+    console.error('Cloud save error:', msg, err);
+    return false;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && _currentUser) {
+    clearTimeout(_cloudSaveTimer);
+    _cloudSaveTimer = null;
+    _saveAllBoardsToCloud();
+  }
+});
+
+function _queueCloudSave() {
+  if (!_currentUser) return;
+  clearTimeout(_cloudSaveTimer);
+  _setSaveStatus('Unsaved');
+  _cloudSaveTimer = setTimeout(_saveAllBoardsToCloud, 2000);
+}
+
+// ── CLOUD LOAD ──
+async function _loadFromCloud() {
+  const { data: boards, error } = await _sb
+    .from('boards')
+    .select('id, title, data, owner_id, workspace_id, share_token, share_enabled, updated_at')
+    .order('updated_at', { ascending: false });
+
+  if (error) { console.error('Load error:', error); return false; }
+  if (!boards || boards.length === 0) return false;
+
+  state.boards = {};
+  boards.forEach(b => {
+    state.boards[b.id] = {
+      id: b.id,
+      name: b.title,
+      parentId: b.data.parentId || null,
+      pan: b.data.pan || { x:0, y:0 },
+      zoom: b.data.zoom || 1,
+      cards: b.data.cards || [],
+      arrows: b.data.arrows || [],
+      _ownerId: b.owner_id,
+      _workspaceId: b.workspace_id,
+      _shareToken: b.share_token,
+      _shareEnabled: b.share_enabled || false,
+    };
+  });
+  const rootBoards = boards.filter(b => !b.data.parentId);
+  state.activeBoard = (rootBoards[0] || boards[0]).id;
+  state.theme = [];
+  return true;
+}
+
+// ── IMAGE UPLOAD TO STORAGE ──
+async function _uploadImage(file) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${_currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await _sb.storage.from('card-images').upload(path, file, { cacheControl: '3600' });
+  if (error) throw error;
+  const { data } = _sb.storage.from('card-images').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// ── WORKSPACE ──
+let _workspaceId = null;
+
+async function _getOrCreateWorkspace() {
+  const { data } = await _sb.rpc('get_workspace_for_user');
+  if (data) { _workspaceId = data; return; }
+  const { data: newId } = await _sb.rpc('create_workspace_for_user', { p_name: 'My Workspace' });
+  _workspaceId = newId;
+}
+
+async function _loadWorkspaceMembers() {
+  if (!_workspaceId) return;
+  const { data } = await _sb
+    .from('workspace_members')
+    .select('user_id, role, profiles(display_name)')
+    .eq('workspace_id', _workspaceId);
+
+  const list = document.getElementById('member-list');
+  if (!list) return;
+  if (!data || data.length === 0) {
+    list.innerHTML = '<p style="font-size:13px;color:#bbb;padding:8px 0">No members yet — generate an invite link above.</p>';
+    return;
+  }
+  list.innerHTML = data.map(m => `
+    <div class="member-item">
+      <div class="member-avatar">${(m.profiles?.display_name || '?')[0].toUpperCase()}</div>
+      <div class="member-info">
+        <div class="member-name">${m.profiles?.display_name || 'Unknown'}</div>
+        <div class="member-role">${m.role}</div>
+      </div>
+      ${m.user_id !== _currentUser.id
+        ? `<button class="member-remove-btn" onclick="_removeMember('${m.user_id}')">Remove</button>`
+        : '<span style="font-size:11px;color:#bbb">You</span>'}
+    </div>
+  `).join('');
+}
+
+async function _removeMember(userId) {
+  await _sb.from('workspace_members').delete()
+    .eq('workspace_id', _workspaceId).eq('user_id', userId);
+  _loadWorkspaceMembers();
+}
+
+async function _generateInviteLink() {
+  const email = document.getElementById('invite-email').value.trim();
+  const role = document.getElementById('invite-role').value;
+  const errEl = document.getElementById('invite-error');
+  errEl.style.display = 'none';
+
+  if (!email) {
+    errEl.textContent = 'Enter an email address';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!_workspaceId) {
+    errEl.textContent = 'Workspace not ready — try again in a moment';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const { data: token, error } = await _sb.rpc('generate_workspace_invite', {
+    p_workspace_id: _workspaceId,
+    p_email: email,
+    p_role: role,
+  });
+
+  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return; }
+
+  const url = `${location.origin}${location.pathname}?invite=${token}`;
+  document.getElementById('invite-link-url').textContent = url;
+  document.getElementById('invite-link-box').style.display = 'flex';
+  document.getElementById('invite-note').style.display = 'block';
+  document.getElementById('invite-email').value = '';
+}
+
+// ── BOARD SHARE ──
+async function _openShareModal() {
+  const { data } = await _sb
+    .from('boards')
+    .select('share_token, share_enabled, share_role')
+    .eq('id', state.activeBoard)
+    .single();
+
+  if (data) {
+    const b = state.boards[state.activeBoard];
+    if (b) { b._shareToken = data.share_token; b._shareEnabled = data.share_enabled; b._shareRole = data.share_role || 'editor'; }
+  }
+
+  _renderBoardShareUI();
+  _loadWorkspaceMembers();
+  _loadShareModalComments();
+  document.getElementById('share-modal').classList.add('open');
+}
+
+async function _loadShareModalComments() {
+  const b = state.boards[state.activeBoard];
+  const section = document.getElementById('share-comments-section');
+  const list = document.getElementById('share-comments-list');
+  const empty = document.getElementById('share-comments-empty');
+  if (!b?._shareToken || !b?._shareEnabled) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  const { data } = await _sb.rpc('get_board_comments', { p_token: b._shareToken });
+  if (!data || data.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = data.map(c => `
+    <div style="background:#f9f9f9;border-radius:8px;padding:10px 12px">
+      <div style="font-size:12px;font-weight:600;color:#333;margin-bottom:3px">${escHtml(c.author_name || 'Anonymous')}</div>
+      <div style="font-size:13px;color:#444;line-height:1.5">${escHtml(c.body)}</div>
+      <div style="font-size:11px;color:#aaa;margin-top:4px">${_relTime(c.created_at)}</div>
+    </div>
+  `).join('');
+}
+
+function _renderBoardShareUI() {
+  const b = state.boards[state.activeBoard];
+  const toggle = document.getElementById('board-share-toggle');
+  const linkBox = document.getElementById('board-link-box');
+  const urlEl = document.getElementById('board-share-url');
+  const roleToggle = document.getElementById('board-role-toggle');
+
+  if (b?._shareEnabled) {
+    toggle.classList.add('on');
+    urlEl.textContent = `${location.origin}${location.pathname}?board=${b._shareToken}`;
+    linkBox.style.display = 'block';
+    const isViewOnly = b._shareRole === 'viewer';
+    roleToggle.classList.toggle('on', isViewOnly);
+  } else {
+    toggle.classList.remove('on');
+    linkBox.style.display = 'none';
+    roleToggle.classList.remove('on');
+  }
+}
+
+async function _toggleBoardShare() {
+  const b = state.boards[state.activeBoard];
+  if (!b) return;
+  const newEnabled = !b._shareEnabled;
+  const { data: token, error } = await _sb.rpc('set_board_share', {
+    p_board_id: state.activeBoard,
+    p_enabled: newEnabled,
+    p_role: b._shareRole || 'editor',
+  });
+  if (error) { console.error('Share toggle error:', error); return; }
+  b._shareEnabled = newEnabled;
+  if (token) b._shareToken = token;
+  _renderBoardShareUI();
+}
+
+async function _toggleBoardShareRole() {
+  const b = state.boards[state.activeBoard];
+  if (!b || !b._shareEnabled) return;
+  const newRole = (b._shareRole === 'viewer') ? 'editor' : 'viewer';
+  const { error } = await _sb.from('boards')
+    .update({ share_role: newRole })
+    .eq('id', state.activeBoard);
+  if (error) { console.error('Role toggle error:', error); return; }
+  b._shareRole = newRole;
+  _renderBoardShareUI();
+}
+
+document.getElementById('board-role-toggle').addEventListener('click', () => _toggleBoardShareRole());
+
+// ── SHARE MODAL EVENTS ──
+document.getElementById('share-btn').addEventListener('click', () => _openShareModal());
+document.getElementById('share-close').addEventListener('click', () => {
+  document.getElementById('share-modal').classList.remove('open');
+});
+document.getElementById('share-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('share-modal'))
+    document.getElementById('share-modal').classList.remove('open');
+});
+document.getElementById('board-share-toggle').addEventListener('click', () => _toggleBoardShare());
+document.getElementById('invite-generate-btn').addEventListener('click', () => _generateInviteLink());
+document.getElementById('copy-board-link').addEventListener('click', function() {
+  const url = document.getElementById('board-share-url').textContent;
+  navigator.clipboard.writeText(url).then(() => { this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 1500); });
+});
+document.getElementById('copy-invite-link').addEventListener('click', function() {
+  const url = document.getElementById('invite-link-url').textContent;
+  navigator.clipboard.writeText(url).then(() => { this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 1500); });
+});
+
+// ── READONLY BADGE ──
+document.getElementById('readonly-badge-dismiss').addEventListener('click', () => {
+  document.getElementById('readonly-badge').classList.remove('show');
+});
+
+// ── MOBILE MORE MENU ──
+const _moreBtn = document.getElementById('mobile-more-btn');
+const _moreMenu = document.getElementById('mobile-more-menu');
+_moreBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const lbl = document.getElementById('mmm-save-label');
+  if (lbl) lbl.textContent = document.getElementById('save-status')?.textContent || 'Saved';
+  _moreMenu.classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if (!_moreMenu.contains(e.target) && e.target !== _moreBtn)
+    _moreMenu.classList.remove('open');
+});
+function _closeMobileMenu() { _moreMenu.classList.remove('open'); }
+
+document.getElementById('mmm-undo').addEventListener('click', () => { _closeMobileMenu(); document.getElementById('undo-btn').click(); });
+document.getElementById('mmm-redo').addEventListener('click', () => { _closeMobileMenu(); document.getElementById('redo-btn').click(); });
+document.getElementById('mmm-export-png').addEventListener('click', () => { _closeMobileMenu(); document.getElementById('export-png').click(); });
+document.getElementById('mmm-export-json').addEventListener('click', () => { _closeMobileMenu(); document.getElementById('export-json').click(); });
+document.getElementById('mmm-import').addEventListener('click', () => { _closeMobileMenu(); document.getElementById('import-file').click(); });
+
+document.getElementById('signup-cta-btn').addEventListener('click', () => {
+  window.open(location.pathname, '_blank');
+});
+document.addEventListener('mousedown', e => {
+  const badge = document.getElementById('readonly-badge');
+  if (badge.classList.contains('show') && !badge.contains(e.target)) {
+    badge.classList.remove('show');
+  }
+});
+
+// ── COMMENTS ──
+let _commentsShareToken = null;
+
+function _initComments(token) {
+  _commentsShareToken = token;
+  document.getElementById('comments-fab').classList.add('show');
+  _loadComments();
+}
+
+async function _loadComments() {
+  if (!_commentsShareToken) return;
+  const { data } = await _sb.rpc('get_board_comments', { p_token: _commentsShareToken });
+  const list = document.getElementById('comments-list');
+  if (!list) return;
+  if (!data || data.length === 0) { list.innerHTML = ''; return; }
+  list.innerHTML = data.map(c => `
+    <div class="comment-item">
+      <div class="comment-author">${escHtml(c.author_name)}</div>
+      <div class="comment-body">${escHtml(c.body)}</div>
+      <div class="comment-time">${_relTime(c.created_at)}</div>
+    </div>
+  `).join('');
+  const count = document.getElementById('comments-count');
+  count.textContent = data.length;
+  count.classList.toggle('has', data.length > 0);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _relTime(iso) {
+  const d = new Date(iso), now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return d.toLocaleDateString();
+}
+
+document.getElementById('comments-fab').addEventListener('click', () => {
+  const panel = document.getElementById('comments-panel');
+  panel.classList.toggle('open');
+  document.getElementById('comments-fab').style.display = 'none';
+  if (panel.classList.contains('open')) _loadComments();
+});
+document.getElementById('comments-panel-close').addEventListener('click', () => {
+  document.getElementById('comments-panel').classList.remove('open');
+  document.getElementById('comments-fab').style.display = '';
+  document.getElementById('comments-fab').classList.add('show');
+});
+document.getElementById('comment-submit-btn').addEventListener('click', async () => {
+  const name = document.getElementById('comment-name-input').value.trim();
+  const body = document.getElementById('comment-body-input').value.trim();
+  if (!body) return;
+  const btn = document.getElementById('comment-submit-btn');
+  btn.disabled = true;
+  const { error } = await _sb.rpc('add_board_comment', {
+    p_token: _commentsShareToken,
+    p_author: name,
+    p_body: body,
+  });
+  btn.disabled = false;
+  if (!error) {
+    document.getElementById('comment-body-input').value = '';
+    await _loadComments();
+  }
+});
+
+// ── BOOT ──
+async function _bootApp() {
+  if (!state.theme) state.theme = [];
+  const b = state.boards[state.activeBoard];
+  if (b) { pan = { ...b.pan }; zoom = b.zoom || 1; }
+  renderBoard();
+  initColorPicker();
+  if (activeBoard().cards.length === 0) {
+    pan.x = viewport.offsetWidth / 2 - 100;
+    pan.y = viewport.offsetHeight / 2 - 50;
+    applyTransform(false);
+  }
+  _updateUserUI();
+  _hideAuth();
+  await _getOrCreateWorkspace();
+  // Board owner can see comments left by view-only visitors
+  if (b?._shareEnabled && b?._shareToken) {
+    _initComments(b._shareToken);
+  }
+}
+
+async function _migrateLocalStorage() {
+  const lsRaw = localStorage.getItem('moodboard-state');
+  if (!lsRaw || localStorage.getItem('_sb_migrated')) return false;
+  try {
+    const ls = JSON.parse(lsRaw);
+    if (!ls.boards) return false;
+    // Remap any non-UUID board IDs (e.g. 'root') to proper UUIDs
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const idMap = {};
+    const boards = {};
+    Object.values(ls.boards).forEach(b => {
+      const newId = uuidRe.test(b.id) ? b.id : _genBoardId();
+      idMap[b.id] = newId;
+      boards[newId] = { ...b, id: newId };
+    });
+    Object.values(boards).forEach(b => {
+      if (b.parentId && idMap[b.parentId]) b.parentId = idMap[b.parentId];
+    });
+    const oldActive = ls.activeBoard || Object.keys(ls.boards)[0];
+    state.boards = boards;
+    state.activeBoard = idMap[oldActive] || Object.keys(boards)[0];
+    state.theme = ls.theme || [];
+    const saved = await _saveAllBoardsToCloud();
+    if (saved) localStorage.setItem('_sb_migrated', '1');
+    return saved;
+  } catch(e) { return false; }
+}
+
+async function _initApp() {
+  const params = new URLSearchParams(location.search);
+  const inviteToken = params.get('invite');
+  const shareToken = params.get('board');
+
+  // Handle shared board link (no auth needed — always show as viewer)
+  if (shareToken && !inviteToken) {
+    const { data: board } = await _sb.rpc('get_shared_board', { p_token: shareToken });
+    if (board) {
+      const isViewOnly = board.share_role === 'viewer';
+      state.boards = {};
+      state.boards[board.id] = {
+        id: board.id, name: board.title,
+        parentId: board.data?.parentId || null,
+        pan: board.data?.pan || { x:0, y:0 },
+        zoom: board.data?.zoom || 1,
+        cards: board.data?.cards || [],
+        arrows: board.data?.arrows || [],
+        _shareToken: board.share_token,
+        _shareEnabled: true,
+        _shareRole: board.share_role || 'editor',
+        _readOnly: isViewOnly,
+      };
+      state.activeBoard = board.id;
+      state.theme = [];
+      renderBoard();
+      initColorPicker();
+      if (isViewOnly) {
+        document.body.classList.add('is-readonly');
+        document.getElementById('readonly-badge').classList.add('show');
+        _initComments(shareToken);
+      }
+      return;
+    }
+  }
+
+  const { data: { session } } = await _sb.auth.getSession();
+  _currentUser = session?.user ?? null;
+
+  async function _prepareState() {
+    const hasCloud = await _loadFromCloud();
+    if (!hasCloud) {
+      const migrated = await _migrateLocalStorage();
+      if (!migrated) {
+        // Fresh user — generate a real UUID for the default board
+        const newId = _genBoardId();
+        state.boards = { [newId]: { id: newId, name: 'Home', parentId: null, pan:{x:0,y:0}, zoom:1, cards:[], arrows:[] } };
+        state.activeBoard = newId;
+      }
+    }
+  }
+
+  _sb.auth.onAuthStateChange(async (event, session) => {
+    _currentUser = session?.user ?? null;
+    if (event === 'SIGNED_IN') {
+      // Handle workspace invite after sign-in
+      if (inviteToken) {
+        const { data: result } = await _sb.rpc('join_workspace', { p_token: inviteToken });
+        if (result && !result.error) {
+          history.replaceState({}, '', location.pathname);
+        }
+      }
+      await _prepareState();
+      await _bootApp();
+    }
+  });
+
+  if (_currentUser) {
+    if (inviteToken) {
+      const { data: result } = await _sb.rpc('join_workspace', { p_token: inviteToken });
+      if (result && !result.error) history.replaceState({}, '', location.pathname);
+    }
+    await _prepareState();
+    await _bootApp();
+  } else {
+    _showAuth();
+    if (inviteToken) {
+      const errEl = document.getElementById('auth-error');
+      errEl.textContent = 'Sign in or create an account to join the workspace.';
+      errEl.style.display = 'block';
+    }
+  }
+}
+
 // ── UTILITIES ──
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -1906,14 +3186,16 @@ function saveState() {
   b.zoom = zoom;
   localStorage.setItem('moodboard-state', JSON.stringify(state));
   if (!_inUndoRedo) commitHistory();
+  _queueCloudSave();
 }
 
-// Save to localStorage without queuing a history snapshot (used after pre-push mutations).
+// Save without queuing a history snapshot (used after pre-push mutations).
 function saveStateNoHistory() {
   const b = state.boards[state.activeBoard];
   b.pan = { ...pan };
   b.zoom = zoom;
   localStorage.setItem('moodboard-state', JSON.stringify(state));
+  _queueCloudSave();
 }
 
 // ── DOT GRID ──
@@ -2298,28 +3580,7 @@ function addCard(type, screenX, screenY) {
   updateEmptyState();
   saveStateNoHistory();
 
-  // Focus note
-  if (type === 'note') {
-    setTimeout(() => {
-      const content = el.querySelector('.note-content');
-      if (content) content.focus();
-    }, 250);
-  }
-
-  if (type === 'swatch') {
-    setTimeout(() => {
-      const body = el.querySelector('.swatch-body');
-      if (body) openColorPicker(card.content.color || '#C9102E', body, hex => {
-        card.content.color = hex;
-        const bodyEl = getCardEl(card.id)?.querySelector('.swatch-body');
-        if (bodyEl) bodyEl.style.background = hex;
-        const hexEl = getCardEl(card.id)?.querySelector('.swatch-hex');
-        if (hexEl) hexEl.textContent = hex.toUpperCase();
-        applyCardStyle(getCardEl(card.id), card);
-        saveState();
-      }, card, false, null, null);
-    }, 100);
-  }
+  // Note and swatch: placed blank, no auto-edit or auto-picker
 
   return card;
 }
@@ -2528,13 +3789,18 @@ function buildFileCardHTML(card) {
 }
 
 const SHAPE_DEFS = {
-  rect:      { label: 'Rect',     svg: '<rect x="2" y="2" width="96" height="96"/>' },
-  roundrect: { label: 'Round',    svg: '<rect x="2" y="2" width="96" height="96" rx="18"/>' },
-  circle:    { label: 'Circle',   svg: '<ellipse cx="50" cy="50" rx="48" ry="48"/>' },
-  triangle:  { label: 'Triangle', svg: '<polygon points="50,2 98,98 2,98"/>' },
-  diamond:   { label: 'Diamond',  svg: '<polygon points="50,2 98,50 50,98 2,50"/>' },
-  hexagon:   { label: 'Hexagon',  svg: '<polygon points="50,2 93,26 93,74 50,98 7,74 7,26"/>' },
-  star:      { label: 'Star',     svg: '<polygon points="50,2 61,35 97,35 68,57 79,91 50,70 21,91 32,57 3,35 39,35"/>' },
+  rect:      { label: 'Rectangle', svg: '<rect x="2" y="2" width="96" height="96"/>' },
+  roundrect: { label: 'Rounded',   svg: '<rect x="2" y="2" width="96" height="96" rx="18"/>' },
+  circle:    { label: 'Circle',    svg: '<ellipse cx="50" cy="50" rx="48" ry="48"/>' },
+  triangle:  { label: 'Triangle',  svg: '<polygon points="50,2 98,98 2,98"/>' },
+  diamond:   { label: 'Diamond',   svg: '<polygon points="50,2 98,50 50,98 2,50"/>' },
+  hexagon:   { label: 'Hexagon',   svg: '<polygon points="50,2 93,26 93,74 50,98 7,74 7,26"/>' },
+  star:      { label: 'Star',      svg: '<polygon points="50,2 61,35 97,35 68,57 79,91 50,70 21,91 32,57 3,35 39,35"/>' },
+  pentagon:  { label: 'Pentagon',  svg: '<polygon points="50,2 96,35 78,89 22,89 4,35"/>' },
+  heart:     { label: 'Heart',     svg: '<path d="M50,80 C50,80 8,56 8,28 C8,14 18,6 31,6 C40,6 47,12 50,19 C53,12 60,6 69,6 C82,6 92,14 92,28 C92,56 50,80 50,80Z"/>' },
+  arrow:     { label: 'Arrow',     svg: '<polygon points="2,32 58,32 58,10 98,50 58,90 58,68 2,68"/>' },
+  cross:     { label: 'Cross',     svg: '<polygon points="35,2 65,2 65,35 98,35 98,65 65,65 65,98 35,98 35,65 2,65 2,35 35,35"/>' },
+  oval:      { label: 'Oval',      svg: '<ellipse cx="50" cy="50" rx="48" ry="30"/>' },
 };
 
 function buildShapeHTML(card) {
@@ -2558,7 +3824,7 @@ function buildNoteHTML(card) {
     `line-height:${t.lineHeight || 1.55}`,
     `letter-spacing:${t.letterSpacing || 0}em`
   ].join(';');
-  return `<div class="note-content" contenteditable="true" data-placeholder="Start writing…" style="${style}">${card.content.text || ''}</div>`;
+  return `<div class="note-content" contenteditable="true" data-placeholder="edit me" style="${style}">${card.content.text || ''}</div>`;
 }
 
 function buildTodoHTML(card) {
@@ -2713,7 +3979,7 @@ function buildSectionChildContent(child) {
         `line-height:${t.lineHeight||1.55}`,
         `letter-spacing:${(t.letterSpacing||0)}em`
       ].join(';');
-      return `<div class="note-content" contenteditable="true" data-placeholder="Start writing…" style="${style}">${child.content.text||''}</div>`;
+      return `<div class="note-content" contenteditable="true" data-placeholder="edit me" style="${style}">${child.content.text||''}</div>`;
     }
     case 'todo': {
       const items = child.content.items || [];
@@ -2882,7 +4148,11 @@ function attachSectionChildContentEvents(childEl, child, sectionCard, sectionEl)
     if (content) {
       content.addEventListener('focus', () => { activeNoteCard = child; showTypoToolbar(childEl, child); });
       content.addEventListener('blur', () => { setTimeout(() => { if (!typoToolbar.contains(document.activeElement)) hideTypoToolbar(); }, 150); });
-      content.addEventListener('input', () => { child.content.text = content.innerHTML; saveState(); });
+      content.addEventListener('input', () => {
+        child.content.text = content.innerHTML;
+        content.classList.toggle('is-empty', content.innerText.trim() === '');
+        saveState();
+      });
     }
   }
   if (child.type === 'todo') {
@@ -3229,7 +4499,11 @@ function attachCardEvents(el, card) {
     content.addEventListener('blur', () => {
       setTimeout(() => { if (!typoToolbar.contains(document.activeElement)) hideTypoToolbar(); }, 150);
     });
-    content.addEventListener('input', () => { card.content.text = content.innerHTML; saveState(); });
+    content.addEventListener('input', () => {
+      card.content.text = content.innerHTML;
+      content.classList.toggle('is-empty', content.innerText.trim() === '');
+      saveState();
+    });
   }
 
   if (card.type === 'todo') {
@@ -3674,13 +4948,18 @@ function _attachImagePanHandle(reposHandle, card, el) {
 
 function loadImageFile(file, card, el) {
   const reader = new FileReader();
-  reader.onload = evt => {
-    card.content.src = evt.target.result;
+  reader.onload = async evt => {
+    const base64 = evt.target.result;
+
+    // Upload to Supabase Storage if logged in, otherwise fall back to base64
+    let finalSrc = base64;
+    if (_currentUser) {
+      try { finalSrc = await _uploadImage(file); } catch(e) { /* fall through */ }
+    }
+    card.content.src = finalSrc;
+
     const imgProbe = new Image();
     imgProbe.onload = () => {
-      // Set a fixed display size for the image. The card starts at that full size
-      // so the whole image is visible. User drags edges to crop (shrink the frame),
-      // then drags the pan handle to reposition the image within the frame.
       let imgW = imgProbe.naturalWidth;
       let imgH = imgProbe.naturalHeight;
       const maxW = 400;
@@ -3695,7 +4974,6 @@ function loadImageFile(file, card, el) {
       el.style.width = card.w + 'px';
       el.style.height = card.h + 'px';
 
-      // Surgical DOM update — do NOT call refreshCardElement (would double-attach events)
       const display = el.querySelector('.image-display');
       if (display) {
         display.className = 'image-display has-photo has-crop';
@@ -3708,7 +4986,6 @@ function loadImageFile(file, card, el) {
         if (cap) cap.addEventListener('input', () => { card.content.caption = cap.innerText; saveState(); });
       }
 
-      // Swap the width-only resize handle for corner + edge crop handles
       el.querySelector('.resize-handle')?.remove();
       if (!el.querySelector('.shape-corner-resize')) {
         const cr = document.createElement('div');
@@ -3728,7 +5005,7 @@ function loadImageFile(file, card, el) {
       saveState();
     };
     imgProbe.onerror = () => { refreshCardElement(card, el); saveState(); };
-    imgProbe.src = evt.target.result;
+    imgProbe.src = base64; // always use base64 for dimension probing
   };
   reader.readAsDataURL(file);
 }
@@ -4084,6 +5361,58 @@ viewport.addEventListener('mousedown', e => {
   }
 });
 
+// ── TOUCH: pan + pinch-zoom ──
+(function initTouch() {
+  let t0 = null, t1 = null, lastDist = null;
+
+  function getTouches(e) { return Array.from(e.touches); }
+
+  viewport.addEventListener('touchstart', e => {
+    const touches = getTouches(e);
+    if (touches.length === 1) {
+      t0 = touches[0];
+      panStart = { x: touches[0].clientX - pan.x, y: touches[0].clientY - pan.y };
+    } else if (touches.length === 2) {
+      t0 = touches[0]; t1 = touches[1];
+      lastDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+    }
+  }, { passive: true });
+
+  viewport.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const touches = getTouches(e);
+    if (touches.length === 1 && panStart) {
+      pan.x = touches[0].clientX - panStart.x;
+      pan.y = touches[0].clientY - panStart.y;
+      applyTransform(false);
+    } else if (touches.length === 2) {
+      const a = touches[0], b = touches[1];
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      if (lastDist) {
+        const scale = dist / lastDist;
+        const mx = (a.clientX + b.clientX) / 2;
+        const my = (a.clientY + b.clientY) / 2;
+        const rect = viewport.getBoundingClientRect();
+        const cx = mx - rect.left, cy = my - rect.top;
+        const newZoom = Math.min(Math.max(zoom * scale, 0.1), 4);
+        pan.x = cx - (cx - pan.x) * (newZoom / zoom);
+        pan.y = cy - (cy - pan.y) * (newZoom / zoom);
+        zoom = newZoom;
+        applyTransform(false);
+      }
+      lastDist = dist;
+    }
+  }, { passive: false });
+
+  viewport.addEventListener('touchend', e => {
+    if (e.touches.length === 0) { panStart = null; lastDist = null; }
+    if (e.touches.length === 1) {
+      panStart = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
+      lastDist = null;
+    }
+  }, { passive: true });
+})();
+
 function onSelectMove(e) {
   if (!isSelecting) return;
   const rect = viewport.getBoundingClientRect();
@@ -4207,7 +5536,7 @@ document.getElementById('zoom-out').addEventListener('click', () => {
 });
 
 // ── FIT ──
-document.getElementById('fit-btn').addEventListener('click', fitToScreen);
+document.getElementById('fit-btn').addEventListener('click', () => fitToScreen());
 function fitToScreen(ids) {
   const cards = ids
     ? activeBoard().cards.filter(c => ids.has(c.id))
@@ -4871,6 +6200,16 @@ document.getElementById('export-json').addEventListener('click', () => {
   showToast('JSON exported');
 });
 
+document.getElementById('download-board-btn').addEventListener('click', () => {
+  const b = activeBoard();
+  const blob = new Blob([JSON.stringify({ boards: state.boards, activeBoard: state.activeBoard }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.download = (b.name || 'moodboard') + '.json';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  showToast('Board downloaded');
+});
+
 // ── IMPORT ──
 document.getElementById('import-btn').addEventListener('click', () => {
   document.getElementById('import-file').click();
@@ -5095,6 +6434,10 @@ function openColorPicker(initialHex, anchorEl, onChangeFn, sourceCard, isSection
   cpUpdatePalette();
   renderCpThemeColors();
 
+  // Hide "Add this swatch" when editing an existing swatch card
+  const addSwatchBtn = document.getElementById('cp-add-swatch');
+  if (addSwatchBtn) addSwatchBtn.style.display = (sourceCard && sourceCard.type === 'swatch') ? 'none' : '';
+
   const picker = document.getElementById('color-picker');
   picker.style.display = 'block';
 
@@ -5103,12 +6446,28 @@ function openColorPicker(initialHex, anchorEl, onChangeFn, sourceCard, isSection
   let left = 0, top = 0;
   if (anchorEl) {
     const r = anchorEl.getBoundingClientRect();
-    left = r.left + r.width / 2 - pw / 2;
-    top = r.bottom + 10;
-    if (top + ph > window.innerHeight) top = r.top - ph - 10;
-    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
-    if (left < 8) left = 8;
-    if (top < 60) top = 60;
+    // For swatch cards: open beside the card, not over it
+    if (sourceCard && sourceCard.type === 'swatch') {
+      const cardEl = document.getElementById('card-' + sourceCard.id);
+      const cr = cardEl ? cardEl.getBoundingClientRect() : r;
+      top = cr.top;
+      if (cr.right + pw + 16 <= window.innerWidth) {
+        left = cr.right + 12;
+      } else {
+        left = cr.left - pw - 12;
+      }
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      if (left < 8) left = 8;
+      if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+      if (top < 60) top = 60;
+    } else {
+      left = r.left + r.width / 2 - pw / 2;
+      top = r.bottom + 10;
+      if (top + ph > window.innerHeight) top = r.top - ph - 10;
+      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+      if (left < 8) left = 8;
+      if (top < 60) top = 60;
+    }
   } else {
     left = window.innerWidth / 2 - pw / 2;
     top = window.innerHeight / 2 - ph / 2;
@@ -5503,11 +6862,10 @@ function commitHistory() {
     picker.style.display = visible ? 'none' : 'block';
     if (!visible) {
       const r = btn.getBoundingClientRect();
-      picker.style.left = Math.max(8, r.left + r.width/2 - 114) + 'px';
-      picker.style.top = (r.top - picker.offsetHeight - 16) + 'px';
-      setTimeout(() => {
-        picker.style.top = (r.top - picker.offsetHeight - 16) + 'px';
-      }, 0);
+      // Anchor bottom of picker just above the button — no height calculation needed
+      picker.style.top = 'auto';
+      picker.style.bottom = (window.innerHeight - r.top + 8) + 'px';
+      picker.style.left = Math.max(8, Math.min(r.left + r.width / 2 - 148, window.innerWidth - 312)) + 'px';
     }
   });
 
@@ -5842,16 +7200,7 @@ document.addEventListener('keydown', e => {
 });
 
 // ── INITIAL SETUP ──
-loadState();
-renderBoard();
-initColorPicker();
-
-// Center on empty board
-if (activeBoard().cards.length === 0) {
-  pan.x = viewport.offsetWidth / 2 - 100;
-  pan.y = viewport.offsetHeight / 2 - 50;
-  applyTransform(false);
-}
+_initApp();
 </script>
 </body>
 </html>
