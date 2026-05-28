@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>moodboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -206,6 +206,15 @@ html, body {
 .mmm-item svg { flex-shrink: 0; opacity: 0.6; }
 .mmm-sep { height: 1px; background: #f0f0f0; margin: 4px 0; }
 
+/* ── MOBILE BACK BTN ── */
+#mobile-back-btn {
+  display: none; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: rgba(239,237,231,0.18); border: none; border-radius: 8px;
+  color: #EFEDE7; cursor: pointer; transition: background 100ms;
+}
+#mobile-back-btn:hover, #mobile-back-btn:active { background: rgba(239,237,231,0.30); }
+
 /* ── MOBILE ── */
 @media (max-width: 768px) {
   /* Toolbar: strip non-essential items, show ··· instead */
@@ -213,36 +222,39 @@ html, body {
   .app-brand, .breadcrumb, .tb-sep, #save-status { display: none !important; }
   #export-btn, #import-btn, #download-board-btn { display: none !important; }
   #undo-btn, #redo-btn { display: none !important; }
-  #zoom-label { display: none; }
+  /* Hide zoom +/- on mobile (pinch zoom works); keep fit btn */
+  #zoom-out, #zoom-in, #zoom-label { display: none !important; }
   .zoom-group { border: none; background: none; gap: 0; }
-  .zoom-btn { width: 32px; height: 32px; }
-  .board-name { max-width: 160px; font-size: 14px; }
+  /* Hide user name — just show avatar */
+  #user-name-display { display: none !important; }
+  #user-btn { padding: 3px; border-radius: 50%; }
+  .board-name { max-width: 120px; font-size: 14px; }
   #mobile-more-btn { display: flex !important; }
 
   /* Bottom dock: stick to bottom, scroll horizontally */
   #bottom-dock {
-    left: 0; right: 0; bottom: 0;
+    left: 8px; right: 8px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     transform: none;
-    border-radius: 16px 16px 0 0;
-    padding: 6px 10px env(safe-area-inset-bottom, 10px);
+    border-radius: 20px;
+    padding: 8px 10px;
     overflow-x: auto;
     overflow-y: visible;
     scrollbar-width: none;
     gap: 0;
     justify-content: flex-start;
-    box-shadow: 0 -4px 24px rgba(100,5,20,0.22);
+    box-shadow: 0 4px 32px rgba(100,5,20,0.28), 0 2px 8px rgba(100,5,20,0.16);
   }
   #bottom-dock::-webkit-scrollbar { display: none; }
   .dock-btn { width: 56px; flex-shrink: 0; padding: 6px 4px 4px; }
 
   /* Canvas: account for taller dock */
-  #canvas-viewport { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+  #canvas-viewport { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
 
   /* Comments FAB: nudge above dock */
-  #comments-fab { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  #comments-fab { bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 
   /* Signup CTA: above dock */
-  #signup-cta-bar { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); flex-direction: column; gap: 8px; padding: 10px 16px; }
+  #signup-cta-bar { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); flex-direction: column; gap: 8px; padding: 10px 16px; }
 }
 
 /* ── CANVAS ── */
@@ -2128,6 +2140,9 @@ body.is-readonly #signup-cta-bar { display: flex; }
       </span>
     </div>
     <div class="tb-sep"></div>
+    <button id="mobile-back-btn" style="display:none" title="Back">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4L6 9l5 5"/></svg>
+    </button>
     <div class="board-name-wrap">
       <div id="breadcrumb" class="breadcrumb"></div>
       <span id="board-name-display" class="board-name" title="Double-click to rename">Home</span>
@@ -3301,9 +3316,11 @@ function renderBreadcrumb() {
   const crumbs = getBreadcrumbs(state.activeBoard);
   const bc = document.getElementById('breadcrumb');
   const nameDisplay = document.getElementById('board-name-display');
+  const mobileBack = document.getElementById('mobile-back-btn');
 
   if (crumbs.length <= 1) {
     bc.innerHTML = '';
+    if (mobileBack) mobileBack.style.display = 'none';
   } else {
     bc.innerHTML = crumbs.slice(0, -1).map((c, i) =>
       `<span class="breadcrumb-item" data-id="${c.id}">${c.name}</span><span class="breadcrumb-chevron"> › </span>`
@@ -3311,6 +3328,11 @@ function renderBreadcrumb() {
     bc.querySelectorAll('.breadcrumb-item').forEach(el => {
       el.addEventListener('click', () => navigateToBoard(el.dataset.id));
     });
+    if (mobileBack) {
+      mobileBack.style.display = 'flex';
+      const parentId = crumbs[crumbs.length - 2].id;
+      mobileBack.onclick = () => navigateToBoard(parentId);
+    }
   }
   nameDisplay.textContent = activeBoard().name;
 }
@@ -5934,9 +5956,10 @@ function showCardContextMenu(e, card) {
   `;
 
   ctxMenu.style.display = 'block';
-  const x = Math.min(e.clientX, window.innerWidth - 240);
-  const y = Math.min(e.clientY, window.innerHeight - 200);
-  ctxMenu.style.left = x + 'px'; ctxMenu.style.top = y + 'px';
+  const _dockH = window.innerWidth <= 768 ? 110 : 16;
+  const x = Math.min(e.clientX, window.innerWidth - 244);
+  const y = Math.min(e.clientY, window.innerHeight - 220 - _dockH);
+  ctxMenu.style.left = Math.max(4, x) + 'px'; ctxMenu.style.top = Math.max(56, y) + 'px';
 
   ctxMenu.querySelectorAll('.ctx-item[data-action]').forEach(item => {
     item.addEventListener('click', () => {
@@ -5989,12 +6012,16 @@ function showImageUploadOptions(card, el) {
     input.type = 'file';
     input.accept = 'image/*';
     if (capture) input.capture = 'environment';
+    // Must be in DOM before .click() for iOS Safari
+    input.style.cssText = 'position:fixed;top:-200px;left:-200px;opacity:0;pointer-events:none;';
+    document.body.appendChild(input);
     input.addEventListener('change', () => {
       const file = input.files[0];
       if (file && file.type.startsWith('image/')) loadImageFile(file, card, el);
+      input.remove();
     });
-    input.click();
     close();
+    input.click();
   }
 
   sheet.querySelector('#_iuo-photos').addEventListener('click', () => pickFile(false));
@@ -6074,9 +6101,10 @@ function showCanvasContextMenu(e) {
   `;
 
   ctxMenu.style.display = 'block';
-  const x = Math.min(e.clientX, window.innerWidth - 240);
-  const y = Math.min(e.clientY, window.innerHeight - 300);
-  ctxMenu.style.left = x + 'px'; ctxMenu.style.top = y + 'px';
+  const dockClearance = window.innerWidth <= 768 ? 110 : 16;
+  const x = Math.min(e.clientX, window.innerWidth - 244);
+  const y = Math.min(e.clientY, window.innerHeight - 320 - dockClearance);
+  ctxMenu.style.left = Math.max(4, x) + 'px'; ctxMenu.style.top = Math.max(56, y) + 'px';
 
   ctxMenu.querySelectorAll('.ctx-item[data-type]').forEach(item => {
     item.addEventListener('click', () => {
@@ -6822,31 +6850,38 @@ function openColorPicker(initialHex, anchorEl, onChangeFn, sourceCard, isSection
   const picker = document.getElementById('color-picker');
   picker.style.display = 'block';
 
-  // Position
+  // Position — always beside the card, never over it
   const pw = 272, ph = 480;
+  const isMobile = window.innerWidth <= 768;
   let left = 0, top = 0;
-  if (anchorEl) {
-    const r = anchorEl.getBoundingClientRect();
-    // For swatch cards: open beside the card, not over it
-    if (sourceCard && sourceCard.type === 'swatch') {
-      const cardEl = document.getElementById('card-' + sourceCard.id);
-      const cr = cardEl ? cardEl.getBoundingClientRect() : r;
-      top = cr.top;
+
+  // Get the card element rect (most reliable anchor), fall back to anchorEl
+  let cr = null;
+  if (sourceCard) {
+    const cardEl = document.getElementById('card-' + sourceCard.id);
+    if (cardEl) cr = cardEl.getBoundingClientRect();
+  }
+  if (!cr && anchorEl) cr = anchorEl.getBoundingClientRect();
+
+  if (cr) {
+    if (isMobile) {
+      // On mobile: position above the bottom dock, horizontally centred
+      const dockH = 110;
+      left = Math.max(8, Math.min(cr.left + cr.width / 2 - pw / 2, window.innerWidth - pw - 8));
+      top = window.innerHeight - dockH - ph - 8;
+      if (top < 60) top = 60;
+    } else {
+      // Desktop: open to the right of the card; fall back to left if no space
       if (cr.right + pw + 16 <= window.innerWidth) {
         left = cr.right + 12;
       } else {
         left = cr.left - pw - 12;
       }
+      // Vertically: align top of picker with top of card, clamped to viewport
+      top = cr.top;
       if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
       if (left < 8) left = 8;
       if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
-      if (top < 60) top = 60;
-    } else {
-      left = r.left + r.width / 2 - pw / 2;
-      top = r.bottom + 10;
-      if (top + ph > window.innerHeight) top = r.top - ph - 10;
-      if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
-      if (left < 8) left = 8;
       if (top < 60) top = 60;
     }
   } else {
