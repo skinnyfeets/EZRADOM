@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>moodboard</title>
+<title>Canvas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=Syne:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Bricolage+Grotesque:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap');
@@ -1598,6 +1598,27 @@ html, body {
 [data-theme="dark"] .link-empty,
 [data-theme="dark"] .link-loading { color: rgba(239,237,231,0.45); }
 
+/* Section children always have cream bg — override dark-theme cascade from parent section */
+[data-theme="dark"] .section-child .note-content,
+[data-theme="dark"] .section-child .note-title,
+[data-theme="dark"] .section-child .todo-title,
+[data-theme="dark"] .section-child .todo-text,
+[data-theme="dark"] .section-child .todo-add-label,
+[data-theme="dark"] .section-child .todo-add-icon { color: var(--text-primary) !important; }
+[data-theme="dark"] .section-child .todo-title:empty::before { color: var(--text-tertiary) !important; }
+[data-theme="dark"] .section-child .todo-check { border-color: var(--text-tertiary) !important; background: transparent !important; }
+[data-theme="dark"] .section-child .todo-check.checked { background: var(--green) !important; border-color: var(--green) !important; }
+[data-theme="dark"] .section-child .todo-check.checked::after { border-color: #fff !important; }
+[data-theme="dark"] .section-child .swatch-hex,
+[data-theme="dark"] .section-child .swatch-name { color: var(--text-secondary) !important; }
+[data-theme="dark"] .section-child .link-title { color: var(--text-primary) !important; }
+[data-theme="dark"] .section-child .link-desc { color: var(--text-secondary) !important; }
+[data-theme="dark"] .section-child .link-domain-chip { background: rgba(201,16,46,0.07) !important; color: var(--text-secondary) !important; }
+[data-theme="dark"] .section-child .link-url-bar { border-bottom-color: rgba(60,60,67,0.08) !important; }
+[data-theme="dark"] .section-child .link-url-bar input { color: var(--text-primary) !important; }
+[data-theme="dark"] .section-child .link-empty,
+[data-theme="dark"] .section-child .link-loading { color: var(--text-tertiary) !important; }
+
 /* ── AUTH OVERLAY ── */
 #auth-overlay {
   position: fixed; inset: 0; z-index: 10000;
@@ -1994,7 +2015,7 @@ body.is-readonly #signup-cta-bar { display: flex; }
         <rect x="2" y="14" width="10" height="10" rx="3" fill="#C9102E" opacity="0.60"/>
         <rect x="14" y="14" width="10" height="10" rx="3" fill="#C9102E" opacity="0.35"/>
       </svg>
-      moodboard
+      Canvas
     </div>
     <div id="auth-tabs">
       <button class="auth-tab auth-tab--active" data-mode="signin">Sign In</button>
@@ -2079,7 +2100,7 @@ body.is-readonly #signup-cta-bar { display: flex; }
 </div>
 
 <div id="signup-cta-bar">
-  <span class="signup-cta-text">Like what you see? Build your own moodboards for free.</span>
+  <span class="signup-cta-text">Like what you see? Build your own canvas for free.</span>
   <button class="signup-cta-btn" id="signup-cta-btn">Get started →</button>
 </div>
 
@@ -2137,7 +2158,7 @@ body.is-readonly #signup-cta-bar { display: flex; }
         <rect x="14" y="14" width="10" height="10" rx="3" fill="#EFEDE7" opacity="0.35"/>
       </svg>
       <span class="app-wordmark">
-        Moodboard
+        Canvas
         <span class="app-by">by <a href="https://ezradom.com" target="_blank" rel="noopener" class="app-credit">EzraDom</a></span>
       </span>
     </div>
@@ -4387,8 +4408,6 @@ function startSectionChildDrag(e, sectionCard, sectionEl, childId) {
   }
 
   function onUp(ev) {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
     dragEl.classList.remove('dragging-child');
     dragEl.style.opacity = '';
     sectionEl.style.outline = '';
@@ -4435,25 +4454,22 @@ function startSectionChildDrag(e, sectionCard, sectionEl, childId) {
   }
 
   let lastClientX = e.clientX, lastClientY = e.clientY;
-  const origOnMove = onMove;
-  function onMoveTracked(ev) { lastClientX = ev.clientX; lastClientY = ev.clientY; origOnMove(ev); }
-  const origOnUp = onUp;
-  function onUpTracked(ev) { origOnUp({ clientX: lastClientX, clientY: lastClientY }); }
 
-  function onTouchMove(ev) {
-    const t = ev.touches[0];
-    if (t) { lastClientX = t.clientX; lastClientY = t.clientY; onMove({ clientX: t.clientX, clientY: t.clientY }); }
-  }
-  function onTouchEnd() {
-    cleanup();
-    onUp({ clientX: lastClientX, clientY: lastClientY });
-  }
   function cleanup() {
     document.removeEventListener('mousemove', onMoveTracked);
     document.removeEventListener('mouseup', onUpTracked);
     document.removeEventListener('touchmove', onTouchMove);
     document.removeEventListener('touchend', onTouchEnd);
   }
+
+  function onMoveTracked(ev) { lastClientX = ev.clientX; lastClientY = ev.clientY; onMove(ev); }
+  function onUpTracked() { cleanup(); onUp({ clientX: lastClientX, clientY: lastClientY }); }
+
+  function onTouchMove(ev) {
+    const t = ev.touches[0];
+    if (t) { lastClientX = t.clientX; lastClientY = t.clientY; onMove({ clientX: t.clientX, clientY: t.clientY }); }
+  }
+  function onTouchEnd() { cleanup(); onUp({ clientX: lastClientX, clientY: lastClientY }); }
 
   document.addEventListener('mousemove', onMoveTracked);
   document.addEventListener('mouseup', onUpTracked);
@@ -6671,7 +6687,7 @@ document.getElementById('export-png').addEventListener('click', () => {
       logging: false
     }).then(c => {
       const a = document.createElement('a');
-      a.download = (activeBoard().name || 'moodboard') + '.png';
+      a.download = (activeBoard().name || 'canvas') + '.png';
       a.href = c.toDataURL();
       a.click();
       showToast('PNG exported');
@@ -6682,7 +6698,7 @@ document.getElementById('export-png').addEventListener('click', () => {
 document.getElementById('export-json').addEventListener('click', () => {
   exportMenu.style.display = 'none';
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.download = 'moodboard.json';
+  const a = document.createElement('a'); a.download = 'canvas.json';
   a.href = URL.createObjectURL(blob); a.click();
   showToast('JSON exported');
 });

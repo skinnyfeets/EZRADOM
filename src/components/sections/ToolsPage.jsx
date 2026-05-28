@@ -105,7 +105,7 @@ function ToolCard({ number, title, desc, tag, href, page: navPage, featured }) {
 const TOOLS = [
   {
     number: 'T — 001',
-    title: 'BRAND MOODBOARD',
+    title: 'CANVAS',
     desc: 'Infinite canvas for visual brand direction. Drop images, add notes, build colour palettes, and map out the look and feel of a brand — all in one place. No account needed.',
     tag: 'CREATIVE / FREE / BETA',
     href: '/canvas.html',
