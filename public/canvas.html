@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>moodboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
@@ -210,14 +210,13 @@ html, body {
 @media (max-width: 768px) {
   /* Toolbar: strip non-essential items, show ··· instead */
   #toolbar { padding: 0 10px; gap: 0; }
-  .app-by, .breadcrumb, .tb-sep, #save-status { display: none !important; }
+  .app-brand, .breadcrumb, .tb-sep, #save-status { display: none !important; }
   #export-btn, #import-btn, #download-board-btn { display: none !important; }
   #undo-btn, #redo-btn { display: none !important; }
   #zoom-label { display: none; }
   .zoom-group { border: none; background: none; gap: 0; }
   .zoom-btn { width: 32px; height: 32px; }
-  .board-name { max-width: 110px; font-size: 13px; }
-  .app-wordmark { font-size: 13px; }
+  .board-name { max-width: 160px; font-size: 14px; }
   #mobile-more-btn { display: flex !important; }
 
   /* Bottom dock: stick to bottom, scroll horizontally */
@@ -5575,9 +5574,113 @@ document.querySelectorAll('.add-btn[data-type], .dock-btn[data-type]').forEach(b
   });
 });
 
+// ── MOBILE: LONG PRESS → CONTEXT MENU ──
+(function initLongPress() {
+  let timer = null, origin = null;
+
+  viewport.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { clearTimeout(timer); return; }
+    const t = e.touches[0];
+    origin = { x: t.clientX, y: t.clientY };
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!origin) return;
+      const el = document.elementFromPoint(origin.x, origin.y);
+      const cardEl = el?.closest('.card');
+      if (cardEl) {
+        const card = activeBoard().cards.find(c => c.id === cardEl.dataset.id);
+        if (card) {
+          selectedCards.clear();
+          document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+          selectedCards.add(card.id);
+          cardEl.classList.add('selected');
+          showCardContextMenu({ clientX: origin.x, clientY: origin.y, preventDefault: ()=>{} }, card);
+        }
+      } else {
+        showCanvasContextMenu({ clientX: origin.x, clientY: origin.y, preventDefault: ()=>{} });
+      }
+      if (navigator.vibrate) navigator.vibrate(40);
+      origin = null;
+    }, 500);
+  }, { passive: true });
+
+  viewport.addEventListener('touchmove', e => {
+    if (!origin || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (Math.hypot(t.clientX - origin.x, t.clientY - origin.y) > 8) {
+      clearTimeout(timer); origin = null;
+    }
+  }, { passive: true });
+
+  const cancel = () => { clearTimeout(timer); origin = null; };
+  viewport.addEventListener('touchend', cancel, { passive: true });
+  viewport.addEventListener('touchcancel', cancel, { passive: true });
+})();
+
 // ── DOCK DRAG-TO-CANVAS ──
 (function initDockDrag() {
   document.querySelectorAll('.dock-btn[data-type]').forEach(btn => {
+    // ── Touch drag from dock ──
+    btn.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      const type = btn.dataset.type;
+      const svgEl = btn.querySelector('svg');
+      const label = btn.querySelector('svg') ? btn.textContent.trim() : type;
+      const t0 = e.touches[0];
+      const startX = t0.clientX, startY = t0.clientY;
+      let dragging = false, ghost = null;
+
+      function createGhost(x, y) {
+        ghost = document.createElement('div');
+        ghost.className = 'dock-drag-ghost';
+        ghost.innerHTML = (svgEl ? svgEl.outerHTML : '') + `<span>${label}</span>`;
+        document.body.appendChild(ghost);
+        moveGhost(x, y);
+      }
+      function moveGhost(x, y) { if (ghost) { ghost.style.left = x + 'px'; ghost.style.top = y + 'px'; } }
+      function removeGhost() { ghost?.remove(); ghost = null; viewport.classList.remove('dock-drag-drop-zone'); }
+
+      function onMove(mv) {
+        if (mv.touches.length !== 1) return;
+        const t = mv.touches[0];
+        const dx = t.clientX - startX, dy = t.clientY - startY;
+        if (!dragging) {
+          if (Math.abs(dx) > Math.abs(dy) + 4) { cleanup(); return; } // horizontal = dock scroll
+          if (dy < -12) { dragging = true; createGhost(t.clientX, t.clientY); }
+        }
+        if (dragging) {
+          mv.preventDefault();
+          moveGhost(t.clientX, t.clientY);
+          const vr = viewport.getBoundingClientRect();
+          viewport.classList.toggle('dock-drag-drop-zone',
+            t.clientX >= vr.left && t.clientX <= vr.right && t.clientY >= vr.top && t.clientY <= vr.bottom);
+        }
+      }
+
+      function onUp(ev) {
+        cleanup();
+        if (dragging) {
+          const t = ev.changedTouches[0];
+          const vr = viewport.getBoundingClientRect();
+          if (t.clientX >= vr.left && t.clientX <= vr.right && t.clientY >= vr.top && t.clientY <= vr.bottom) {
+            _dockDragDrop = true;
+            addCard(type, t.clientX, t.clientY);
+          }
+          removeGhost();
+        }
+      }
+
+      function cleanup() {
+        btn.removeEventListener('touchmove', onMove);
+        btn.removeEventListener('touchend', onUp);
+        btn.removeEventListener('touchcancel', onUp);
+      }
+
+      btn.addEventListener('touchmove', onMove, { passive: false });
+      btn.addEventListener('touchend', onUp, { passive: true });
+      btn.addEventListener('touchcancel', onUp, { passive: true });
+    }, { passive: true });
+
     btn.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
       const type = btn.dataset.type;
