@@ -1930,6 +1930,38 @@ body.is-readonly #signup-cta-bar { display: flex; }
   font-family: inherit;
 }
 #comment-submit-btn:hover { opacity: 0.88; }
+/* Image upload options sheet */
+.img-upload-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 9999;
+}
+.img-upload-panel {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  background: var(--surface);
+  border-radius: 16px 16px 0 0;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 10000;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+}
+.img-upload-title {
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  text-align: center; padding: 4px 0 12px; letter-spacing: 0.03em;
+}
+.img-upload-btn {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 14px 12px;
+  background: none; border: none; border-radius: 10px;
+  font-size: 15px; color: var(--text-primary); cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.img-upload-btn:hover, .img-upload-btn:active { background: var(--hover-bg); }
+.img-upload-btn svg { width: 22px; height: 22px; flex-shrink: 0; opacity: 0.7; }
+.img-upload-cancel {
+  margin-top: 8px; justify-content: center;
+  color: var(--brand-red); font-weight: 600;
+  border-top: 1px solid var(--separator);
+  border-radius: 0; padding-top: 14px;
+}
 </style>
 </head>
 <body>
@@ -4545,6 +4577,10 @@ function attachCardEvents(el, card) {
         const file = e.dataTransfer.files[0];
         if (file && file.type.startsWith('image/')) loadImageFile(file, card, el);
       });
+      dropZone.addEventListener('click', e => {
+        e.stopPropagation();
+        showImageUploadOptions(card, el);
+      });
     }
     const cap = el.querySelector('.image-caption');
     if (cap) cap.addEventListener('input', () => { card.content.caption = cap.innerText; saveState(); });
@@ -5370,8 +5406,12 @@ viewport.addEventListener('mousedown', e => {
     const touches = getTouches(e);
     if (touches.length === 1) {
       t0 = touches[0];
-      panStart = { x: touches[0].clientX - pan.x, y: touches[0].clientY - pan.y };
+      // Don't set panStart when touching a card — card drag handler takes over
+      if (!touches[0].target.closest('.card')) {
+        panStart = { x: touches[0].clientX - pan.x, y: touches[0].clientY - pan.y };
+      }
     } else if (touches.length === 2) {
+      panStart = null;
       t0 = touches[0]; t1 = touches[1];
       lastDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
     }
@@ -5406,7 +5446,10 @@ viewport.addEventListener('mousedown', e => {
   viewport.addEventListener('touchend', e => {
     if (e.touches.length === 0) { panStart = null; lastDist = null; }
     if (e.touches.length === 1) {
-      panStart = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
+      // Only restore panStart if remaining touch is not on a card
+      if (!e.touches[0].target.closest('.card')) {
+        panStart = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
+      }
       lastDist = null;
     }
   }, { passive: true });
@@ -5617,6 +5660,129 @@ document.querySelectorAll('.add-btn[data-type], .dock-btn[data-type]').forEach(b
   viewport.addEventListener('touchcancel', cancel, { passive: true });
 })();
 
+// ── MOBILE: CARD TOUCH DRAG + TAP ACTIONS ──
+(function initCardTouch() {
+  viewport.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    if (document.body.classList.contains('is-readonly')) return;
+    const touch = e.touches[0];
+    const cardEl = touch.target.closest('.card');
+    if (!cardEl) return;
+    if (cardEl.classList.contains('editing')) return;
+    if (touch.target.closest('.resize-handle, .crop-edge-handle')) return;
+
+    const card = activeBoard().cards.find(c => c.id === cardEl.dataset.id);
+    if (!card) return;
+
+    const wasSelected = selectedCards.has(card.id);
+
+    // Select the card
+    if (!wasSelected) {
+      selectedCards.clear();
+      document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
+    }
+    selectedCards.add(card.id);
+    cardEl.classList.add('selected');
+
+    const initX = touch.clientX, initY = touch.clientY;
+    const origX = card.x, origY = card.y;
+    let moved = false;
+
+    function onTouchMove(ev) {
+      if (ev.touches.length !== 1) return;
+      const t = ev.touches[0];
+      const dx = (t.clientX - initX) / zoom;
+      const dy = (t.clientY - initY) / zoom;
+      if (!moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      if (!moved) pushHistory();
+      moved = true;
+      card.x = snap(origX + dx);
+      card.y = snap(origY + dy);
+      cardEl.style.left = card.x + 'px';
+      cardEl.style.top = card.y + 'px';
+      cardEl.classList.add('dragging');
+      renderArrows();
+    }
+
+    function onTouchEnd(ev) {
+      ev.preventDefault(); // suppress synthetic mouse/click events
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+      cardEl.classList.remove('dragging');
+
+      if (moved) { saveStateNoHistory(); return; }
+
+      // Tap: check special always-active targets
+      const pt = ev.changedTouches[0];
+      const hitEl = document.elementFromPoint(pt.clientX, pt.clientY);
+
+      if (hitEl?.closest('.todo-check')) {
+        hitEl.closest('.todo-check').click();
+        return;
+      }
+      if (card.type === 'board' && hitEl?.closest('.board-card-open')) {
+        if (card.content.boardId) navigateToBoard(card.content.boardId, 'forward');
+        return;
+      }
+      if (card.type === 'board' && hitEl?.closest('.board-color-dot')) {
+        const dot = cardEl.querySelector('.board-color-dot');
+        openColorPicker(card.style.background || '#C9102E', dot, hex => {
+          card.style.background = hex;
+          applyCardStyle(cardEl, card);
+          if (dot) dot.style.background = hex;
+          saveState();
+        }, null, false, null, null);
+        return;
+      }
+
+      // First tap on blank image → show upload options immediately
+      if (!wasSelected && card.type === 'image' && !card.content.src) {
+        showImageUploadOptions(card, cardEl);
+        return;
+      }
+
+      if (!wasSelected) return; // first tap: selection only
+
+      // Second tap actions
+      if (card.type === 'swatch') {
+        const body = cardEl.querySelector('.swatch-body');
+        openColorPicker(card.content.color || '#C9102E', body, hex => {
+          card.content.color = hex;
+          if (body) body.style.background = hex;
+          const hexEl = cardEl.querySelector('.swatch-hex');
+          if (hexEl) hexEl.textContent = hex.toUpperCase();
+          applyCardStyle(cardEl, card);
+          saveState();
+        }, card, false, null, null);
+        return;
+      }
+      if (card.type === 'board') {
+        if (card.content.boardId) navigateToBoard(card.content.boardId, 'forward');
+        return;
+      }
+      if (card.type === 'document') {
+        openDocEditor(card, cardEl);
+        return;
+      }
+      if (card.type === 'file') {
+        const fileId = card.content.fileId;
+        const stored = fileId ? _fileStore.get(fileId) : null;
+        if (stored) openFileViewer(stored, card.content.fileType);
+        else {
+          document.getElementById('file-upload-input')._reuploadCard = card;
+          document.getElementById('file-upload-input')._reuploadEl = cardEl;
+          document.getElementById('file-upload-input').click();
+        }
+        return;
+      }
+      enterEditMode(cardEl, card, { target: hitEl, clientX: pt.clientX, clientY: pt.clientY });
+    }
+
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd, { passive: false });
+  }, { passive: true });
+})();
+
 // ── DOCK DRAG-TO-CANVAS ──
 (function initDockDrag() {
   document.querySelectorAll('.dock-btn[data-type]').forEach(btn => {
@@ -5780,6 +5946,113 @@ function showCardContextMenu(e, card) {
   });
 }
 
+function showImageUploadOptions(card, el) {
+  const sheet = document.createElement('div');
+  sheet.innerHTML = `
+    <div class="img-upload-backdrop"></div>
+    <div class="img-upload-panel">
+      <div class="img-upload-title">Add Image</div>
+      <button class="img-upload-btn" id="_iuo-photos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="M3 17l5-5 4 4 3-3 5 5"/>
+        </svg>
+        Photos
+      </button>
+      <button class="img-upload-btn" id="_iuo-files">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        Files
+      </button>
+      <button class="img-upload-btn" id="_iuo-paste">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="9" y="2" width="6" height="4" rx="1"/>
+          <path d="M8 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2"/>
+          <path d="M9 12h6M9 16h4"/>
+        </svg>
+        Paste from Clipboard
+      </button>
+      <button class="img-upload-btn img-upload-cancel" id="_iuo-cancel">Cancel</button>
+    </div>
+  `;
+  document.body.appendChild(sheet);
+
+  const close = () => sheet.remove();
+  sheet.querySelector('.img-upload-backdrop').addEventListener('click', close);
+  sheet.querySelector('#_iuo-cancel').addEventListener('click', close);
+
+  function pickFile(capture) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (capture) input.capture = 'environment';
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (file && file.type.startsWith('image/')) loadImageFile(file, card, el);
+    });
+    input.click();
+    close();
+  }
+
+  sheet.querySelector('#_iuo-photos').addEventListener('click', () => pickFile(false));
+  sheet.querySelector('#_iuo-files').addEventListener('click', () => pickFile(false));
+
+  sheet.querySelector('#_iuo-paste').addEventListener('click', async () => {
+    close();
+    try {
+      const clipItems = await navigator.clipboard.read();
+      for (const item of clipItems) {
+        const imgType = item.types.find(t => t.startsWith('image/'));
+        if (imgType) {
+          const blob = await item.getType(imgType);
+          const file = new File([blob], 'paste.' + imgType.split('/')[1], { type: imgType });
+          loadImageFile(file, card, el);
+          return;
+        }
+      }
+      showToast('No image found in clipboard');
+    } catch {
+      showToast('Clipboard access denied — try ⌘V / Ctrl+V');
+    }
+  });
+}
+
+async function pasteAtPosition(clientX, clientY) {
+  try {
+    const clipItems = await navigator.clipboard.read();
+    for (const item of clipItems) {
+      const imgType = item.types.find(t => t.startsWith('image/'));
+      if (imgType) {
+        const blob = await item.getType(imgType);
+        const file = new File([blob], 'paste.' + imgType.split('/')[1], { type: imgType });
+        const card = addCard('image', clientX, clientY);
+        const el = getCardEl(card.id);
+        if (el) loadImageFile(file, card, el);
+        return;
+      }
+      if (item.types.includes('text/plain')) {
+        const blob = await item.getType('text/plain');
+        const text = await blob.text();
+        if (text.trim()) {
+          const card = addCard('note', clientX, clientY);
+          const el = getCardEl(card.id);
+          if (el) {
+            const contentEl = el.querySelector('.note-content');
+            if (contentEl) { contentEl.innerText = text; card.content.text = text; saveState(); }
+          }
+          return;
+        }
+      }
+    }
+    showToast('Nothing to paste');
+  } catch {
+    showToast('Clipboard access denied — try ⌘V / Ctrl+V');
+  }
+}
+
 function showCanvasContextMenu(e) {
   ctxMenu.innerHTML = `
     <div class="ctx-label">Add Card</div>
@@ -5790,6 +6063,10 @@ function showCanvasContextMenu(e) {
       </div>`
     ).join('')}
     <div class="ctx-sep"></div>
+    <div class="ctx-item" data-action="paste" data-x="${e.clientX}" data-y="${e.clientY}">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="1" width="4" height="2.5" rx="0.5"/><path d="M4 2H2.5A1.5 1.5 0 001 3.5v9A1.5 1.5 0 002.5 14h9a1.5 1.5 0 001.5-1.5v-9A1.5 1.5 0 0011.5 2H10"/><path d="M4 7h6M4 9.5h4"/></svg>
+      Paste
+    </div>
     <div class="ctx-item" data-action="fit">
       <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9"/></svg>
       Fit to Screen <span class="ctx-shortcut">⌘0</span>
@@ -5808,8 +6085,9 @@ function showCanvasContextMenu(e) {
     });
   });
   ctxMenu.querySelectorAll('.ctx-item[data-action]').forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', async () => {
       if (item.dataset.action === 'fit') fitToScreen();
+      if (item.dataset.action === 'paste') await pasteAtPosition(parseInt(item.dataset.x), parseInt(item.dataset.y));
       hideCtxMenu();
     });
   });
