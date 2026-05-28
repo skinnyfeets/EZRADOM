@@ -224,6 +224,8 @@ html, body {
   #undo-btn, #redo-btn { display: none !important; }
   /* Hide zoom +/- on mobile (pinch zoom works); keep fit btn */
   #zoom-out, #zoom-in, #zoom-label { display: none !important; }
+  /* Show undo/redo on mobile toolbar */
+  #undo-btn, #redo-btn { display: flex !important; }
   .zoom-group { border: none; background: none; gap: 0; }
   /* Hide user name — just show avatar */
   #user-name-display { display: none !important; }
@@ -3461,7 +3463,7 @@ function closeDocEditor() {
       const cr = document.createElement('div');
       cr.className = 'shape-corner-resize';
       cardEl.appendChild(cr);
-      cr.addEventListener('mousedown', e => startCornerResize(e, _docEditorCard, cardEl));
+      _addDragStart(cr, e => startCornerResize(e, _docEditorCard, cardEl));
     }
   }
   _docEditorCard = null;
@@ -3569,7 +3571,7 @@ async function handleFileUpload(file, targetCard, targetEl) {
       const cr = document.createElement('div');
       cr.className = 'shape-corner-resize';
       targetEl.appendChild(cr);
-      cr.addEventListener('mousedown', e => startCornerResize(e, targetCard, targetEl));
+      _addDragStart(cr, e => startCornerResize(e, targetCard, targetEl));
       attachCardEvents(targetEl, targetCard);
     }
     saveState();
@@ -3681,7 +3683,7 @@ function createCardElement(card) {
     const rh = document.createElement('div');
     rh.className = 'resize-handle';
     el.appendChild(rh);
-    rh.addEventListener('mousedown', e => startResize(e, card, el));
+    _addDragStart(rh, e => startResize(e, card, el));
   }
   // Image with photo: corner + edge handles for cropping
   // Image without photo: edge resize only
@@ -3690,20 +3692,20 @@ function createCardElement(card) {
       const cr = document.createElement('div');
       cr.className = 'shape-corner-resize';
       el.appendChild(cr);
-      cr.addEventListener('mousedown', e => startCornerResize(e, card, el));
+      _addDragStart(cr, e => startCornerResize(e, card, el));
       // Edge handles for crop
       ['n','s','e','w'].forEach(edge => {
         const eh = document.createElement('div');
         eh.className = 'crop-edge-handle';
         eh.dataset.edge = edge;
         el.appendChild(eh);
-        eh.addEventListener('mousedown', e => startEdgeResize(e, card, el, edge));
+        _addDragStart(eh, e => startEdgeResize(e, card, el, edge));
       });
     } else {
       const rh = document.createElement('div');
       rh.className = 'resize-handle';
       el.appendChild(rh);
-      rh.addEventListener('mousedown', e => startResize(e, card, el));
+      _addDragStart(rh, e => startResize(e, card, el));
     }
   }
   // Shape, document, file cards: corner resize
@@ -3711,7 +3713,7 @@ function createCardElement(card) {
     const cr = document.createElement('div');
     cr.className = 'shape-corner-resize';
     el.appendChild(cr);
-    cr.addEventListener('mousedown', e => startCornerResize(e, card, el));
+    _addDragStart(cr, e => startCornerResize(e, card, el));
   }
 
   attachCardEvents(el, card);
@@ -4947,7 +4949,7 @@ function refreshCardElement(card, el) {
     const rh = document.createElement('div');
     rh.className = 'resize-handle';
     el.appendChild(rh);
-    rh.addEventListener('mousedown', e => startResize(e, card, el));
+    _addDragStart(rh, e => startResize(e, card, el));
   }
   if (card.type === 'image') {
     if (card.content.src) {
@@ -4956,37 +4958,35 @@ function refreshCardElement(card, el) {
       const cr = document.createElement('div');
       cr.className = 'shape-corner-resize';
       el.appendChild(cr);
-      cr.addEventListener('mousedown', e => startCornerResize(e, card, el));
+      _addDragStart(cr, e => startCornerResize(e, card, el));
       // Edge crop handles
       ['n','s','e','w'].forEach(edge => {
         const eh = document.createElement('div');
         eh.className = 'crop-edge-handle';
         eh.dataset.edge = edge;
         el.appendChild(eh);
-        eh.addEventListener('mousedown', e => startEdgeResize(e, card, el, edge));
+        _addDragStart(eh, e => startEdgeResize(e, card, el, edge));
       });
     } else {
       el.style.height = '';
       const rh = document.createElement('div');
       rh.className = 'resize-handle';
       el.appendChild(rh);
-      rh.addEventListener('mousedown', e => startResize(e, card, el));
+      _addDragStart(rh, e => startResize(e, card, el));
     }
   }
   if (card.type === 'document' || card.type === 'file') {
     const cr = document.createElement('div');
     cr.className = 'shape-corner-resize';
     el.appendChild(cr);
-    cr.addEventListener('mousedown', e => startCornerResize(e, card, el));
+    _addDragStart(cr, e => startCornerResize(e, card, el));
   }
 
   attachCardEvents(el, card);
 }
 
 function _attachImagePanHandle(reposHandle, card, el) {
-  reposHandle.addEventListener('mousedown', e => {
-    e.preventDefault(); e.stopPropagation();
-    const startX = e.clientX, startY = e.clientY;
+  function startPan(startX, startY) {
     const startIX = card.content.imageX || 0;
     const startIY = card.content.imageY || 0;
     const imgEl = el.querySelector('img');
@@ -4997,10 +4997,9 @@ function _attachImagePanHandle(reposHandle, card, el) {
       card.content.imageY = Math.min(0, Math.max(-(card.content.imgH - card.h), startIY + dy));
       if (imgEl) { imgEl.style.left = card.content.imageX + 'px'; imgEl.style.top = card.content.imageY + 'px'; }
     }
-    function onUp() { saveState(); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
+    _docDrag(onMove, () => saveState());
+  }
+  _addDragStart(reposHandle, e => { e.preventDefault(); e.stopPropagation(); startPan(e.clientX, e.clientY); });
 }
 
 function loadImageFile(file, card, el) {
@@ -5048,7 +5047,7 @@ function loadImageFile(file, card, el) {
         const cr = document.createElement('div');
         cr.className = 'shape-corner-resize';
         el.appendChild(cr);
-        cr.addEventListener('mousedown', e => startCornerResize(e, card, el));
+        _addDragStart(cr, e => startCornerResize(e, card, el));
       }
       if (!el.querySelector('.crop-edge-handle')) {
         ['n','s','e','w'].forEach(edge => {
@@ -5056,7 +5055,7 @@ function loadImageFile(file, card, el) {
           eh.className = 'crop-edge-handle';
           eh.dataset.edge = edge;
           el.appendChild(eh);
-          eh.addEventListener('mousedown', e => startEdgeResize(e, card, el, edge));
+          _addDragStart(eh, e => startEdgeResize(e, card, el, edge));
         });
       }
       saveState();
@@ -5212,6 +5211,34 @@ function addCardToBoard(canvasCard, boardCard) {
 }
 
 // ── RESIZE ──
+// Unified mouse + touch drag on document. Pass onMove(e) and onEnd().
+function _docDrag(onMove, onEnd) {
+  function touchMove(e) { e.preventDefault(); const t = e.touches[0]; if (t) onMove({ clientX: t.clientX, clientY: t.clientY }); }
+  function touchEnd() { cleanup(); onEnd(); }
+  function mouseUp() { cleanup(); onEnd(); }
+  function cleanup() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', mouseUp);
+    document.removeEventListener('touchmove', touchMove);
+    document.removeEventListener('touchend', touchEnd);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', mouseUp);
+  document.addEventListener('touchmove', touchMove, { passive: false });
+  document.addEventListener('touchend', touchEnd, { passive: true });
+}
+
+// Attach mousedown + touchstart for drag-start on resize/crop handles.
+function _addDragStart(el, handler) {
+  el.addEventListener('mousedown', handler);
+  el.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault(); e.stopPropagation();
+    const t = e.touches[0];
+    handler({ clientX: t.clientX, clientY: t.clientY, preventDefault: ()=>{}, stopPropagation: ()=>{} });
+  }, { passive: false });
+}
+
 function startResize(e, card, el) {
   e.preventDefault();
   e.stopPropagation();
@@ -5232,15 +5259,7 @@ function startResize(e, card, el) {
     }
   }
 
-  function onUp() {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    resizingCard = null;
-    saveStateNoHistory();
-  }
-
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  _docDrag(onMove, () => { resizingCard = null; saveStateNoHistory(); });
 }
 
 function _clampImagePan(card, el) {
@@ -5287,14 +5306,7 @@ function startCornerResize(e, card, el) {
         }
       }
     }
-    function onScaleUp() {
-      document.removeEventListener('mousemove', onScaleMove);
-      document.removeEventListener('mouseup', onScaleUp);
-      resizingCard = null;
-      saveStateNoHistory();
-    }
-    document.addEventListener('mousemove', onScaleMove);
-    document.addEventListener('mouseup', onScaleUp);
+    _docDrag(onScaleMove, () => { resizingCard = null; saveStateNoHistory(); });
     return;
   }
 
@@ -5310,14 +5322,7 @@ function startCornerResize(e, card, el) {
     el.style.height = card.h + 'px';
     _clampImagePan(card, el);
   }
-  function onUp() {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    resizingCard = null;
-    saveStateNoHistory();
-  }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  _docDrag(onMove, () => { resizingCard = null; saveStateNoHistory(); });
 }
 
 function startEdgeResize(e, card, el, edge) {
@@ -5338,9 +5343,7 @@ function startEdgeResize(e, card, el, edge) {
     el.style.width = card.w + 'px'; el.style.height = card.h + 'px';
     _clampImagePan(card, el);
   }
-  function onUp() { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); resizingCard = null; saveStateNoHistory(); }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  _docDrag(onMove, () => { resizingCard = null; saveStateNoHistory(); });
 }
 
 // ── FILE DROP ON CANVAS ──
@@ -5691,7 +5694,7 @@ document.querySelectorAll('.add-btn[data-type], .dock-btn[data-type]').forEach(b
     const cardEl = touch.target.closest('.card');
     if (!cardEl) return;
     if (cardEl.classList.contains('editing')) return;
-    if (touch.target.closest('.resize-handle, .crop-edge-handle')) return;
+    if (touch.target.closest('.resize-handle, .crop-edge-handle, .shape-corner-resize, .img-reposition')) return;
 
     const card = activeBoard().cards.find(c => c.id === cardEl.dataset.id);
     if (!card) return;
