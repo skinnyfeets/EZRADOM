@@ -1489,6 +1489,10 @@ html, body {
   box-shadow: 0 8px 40px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
   padding: 14px; width: 296px; display: none; z-index: 3000;
 }
+@media (max-width: 480px) {
+  #shape-picker { left: 8px !important; right: 8px !important; width: auto !important; }
+  .sp-grid { grid-template-columns: repeat(4, 1fr); }
+}
 .sp-title {
   font-size: 11px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--text-secondary);
@@ -2109,10 +2113,6 @@ body.is-readonly #signup-cta-bar { display: flex; }
 </div>
 
 <!-- COMMENTS FAB + PANEL -->
-<button id="comments-fab" title="Comments">
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 10c0 3.866-3.134 7-7 7a7.04 7.04 0 0 1-2.5-.457L3 18l1.457-4.5A6.961 6.961 0 0 1 3 10c0-3.866 3.134-7 7-7s7 3.134 7 7Z"/></svg>
-  <span class="fab-count" id="comments-count">0</span>
-</button>
 <div id="comments-panel">
   <div id="comments-panel-header">
     <span>Comments</span>
@@ -2981,7 +2981,7 @@ let _commentsShareToken = null;
 
 function _initComments(token) {
   _commentsShareToken = token;
-  document.getElementById('comments-fab').classList.add('show');
+  document.getElementById('comments-fab')?.classList.add('show');
   _loadComments();
 }
 
@@ -3015,16 +3015,8 @@ function _relTime(iso) {
   return d.toLocaleDateString();
 }
 
-document.getElementById('comments-fab').addEventListener('click', () => {
-  const panel = document.getElementById('comments-panel');
-  panel.classList.toggle('open');
-  document.getElementById('comments-fab').style.display = 'none';
-  if (panel.classList.contains('open')) _loadComments();
-});
 document.getElementById('comments-panel-close').addEventListener('click', () => {
   document.getElementById('comments-panel').classList.remove('open');
-  document.getElementById('comments-fab').style.display = '';
-  document.getElementById('comments-fab').classList.add('show');
 });
 document.getElementById('comment-submit-btn').addEventListener('click', async () => {
   const name = document.getElementById('comment-name-input').value.trim();
@@ -4125,10 +4117,18 @@ function renderSectionChildren(sectionCard, sectionEl) {
       content.appendChild(childEl);
 
       const handle = childEl.querySelector('.section-child-handle');
-      if (handle) handle.addEventListener('mousedown', e => {
-        e.stopPropagation();
-        startSectionChildDrag(e, sectionCard, sectionEl, child.id);
-      });
+      if (handle) {
+        handle.addEventListener('mousedown', e => {
+          e.stopPropagation();
+          startSectionChildDrag(e, sectionCard, sectionEl, child.id);
+        });
+        handle.addEventListener('touchstart', e => {
+          if (e.touches.length !== 1) return;
+          e.preventDefault(); e.stopPropagation();
+          const t = e.touches[0];
+          startSectionChildDrag({ clientX: t.clientX, clientY: t.clientY, preventDefault(){}, stopPropagation(){} }, sectionCard, sectionEl, child.id);
+        }, { passive: false });
+      }
 
       childEl.addEventListener('mousedown', e => {
         e.stopPropagation();
@@ -4163,6 +4163,29 @@ function renderSectionChildren(sectionCard, sectionEl) {
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', cleanup);
       });
+
+      childEl.addEventListener('touchstart', e => {
+        if (e.touches.length !== 1) return;
+        if (e.target.closest('.section-child-handle')) return; // handle has its own listener
+        e.stopPropagation();
+        const t0 = e.touches[0];
+        const sx = t0.clientX, sy = t0.clientY;
+        let lastX = sx, lastY = sy;
+        let dragging = false;
+        function onTMove(mv) {
+          if (mv.touches.length !== 1) return;
+          const tt = mv.touches[0];
+          lastX = tt.clientX; lastY = tt.clientY;
+          if (!dragging && (Math.abs(lastX - sx) > 8 || Math.abs(lastY - sy) > 8)) {
+            dragging = true;
+            cleanup();
+            startSectionChildDrag({ clientX: sx, clientY: sy, preventDefault(){}, stopPropagation(){} }, sectionCard, sectionEl, child.id);
+          }
+        }
+        function cleanup() { document.removeEventListener('touchmove', onTMove); document.removeEventListener('touchend', cleanup); }
+        document.addEventListener('touchmove', onTMove, { passive: true });
+        document.addEventListener('touchend', cleanup);
+      }, { passive: true });
 
       attachSectionChildContentEvents(childEl, child, sectionCard, sectionEl);
       addInsertIndicator(content, idx + 1);
@@ -4283,6 +4306,17 @@ function attachSectionChildContentEvents(childEl, child, sectionCard, sectionEl)
   }
 }
 
+function _findSectionAt(cx, cy, excludeId) {
+  for (const c of activeBoard().cards) {
+    if (c.type !== 'section' || c.id === excludeId) continue;
+    const secEl = getCardEl(c.id);
+    if (!secEl) continue;
+    const r = secEl.getBoundingClientRect();
+    if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) return c;
+  }
+  return null;
+}
+
 function addCardToSection(canvasCard, sectionCard, sectionEl) {
   activeBoard().cards = activeBoard().cards.filter(c => c.id !== canvasCard.id);
   const el = getCardEl(canvasCard.id); if (el) el.remove();
@@ -4400,8 +4434,31 @@ function startSectionChildDrag(e, sectionCard, sectionEl, childId) {
     }
   }
 
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
+  let lastClientX = e.clientX, lastClientY = e.clientY;
+  const origOnMove = onMove;
+  function onMoveTracked(ev) { lastClientX = ev.clientX; lastClientY = ev.clientY; origOnMove(ev); }
+  const origOnUp = onUp;
+  function onUpTracked(ev) { origOnUp({ clientX: lastClientX, clientY: lastClientY }); }
+
+  function onTouchMove(ev) {
+    const t = ev.touches[0];
+    if (t) { lastClientX = t.clientX; lastClientY = t.clientY; onMove({ clientX: t.clientX, clientY: t.clientY }); }
+  }
+  function onTouchEnd() {
+    cleanup();
+    onUp({ clientX: lastClientX, clientY: lastClientY });
+  }
+  function cleanup() {
+    document.removeEventListener('mousemove', onMoveTracked);
+    document.removeEventListener('mouseup', onUpTracked);
+    document.removeEventListener('touchmove', onTouchMove);
+    document.removeEventListener('touchend', onTouchEnd);
+  }
+
+  document.addEventListener('mousemove', onMoveTracked);
+  document.addEventListener('mouseup', onUpTracked);
+  document.addEventListener('touchmove', onTouchMove, { passive: false });
+  document.addEventListener('touchend', onTouchEnd);
 }
 
 function getDomain(url) {
@@ -5712,6 +5769,7 @@ document.querySelectorAll('.add-btn[data-type], .dock-btn[data-type]').forEach(b
     const initX = touch.clientX, initY = touch.clientY;
     const origX = card.x, origY = card.y;
     let moved = false;
+    let hoveredSection = null;
 
     function onTouchMove(ev) {
       if (ev.touches.length !== 1) return;
@@ -5727,6 +5785,15 @@ document.querySelectorAll('.add-btn[data-type], .dock-btn[data-type]').forEach(b
       cardEl.style.top = card.y + 'px';
       cardEl.classList.add('dragging');
       renderArrows();
+
+      if (card.type !== 'section') {
+        const sec = _findSectionAt(t.clientX, t.clientY, card.id);
+        if (sec !== hoveredSection) {
+          if (hoveredSection) getCardEl(hoveredSection.id)?.classList.remove('drop-target');
+          hoveredSection = sec;
+          if (hoveredSection) getCardEl(hoveredSection.id)?.classList.add('drop-target');
+        }
+      }
     }
 
     function onTouchEnd(ev) {
@@ -5734,8 +5801,16 @@ document.querySelectorAll('.add-btn[data-type], .dock-btn[data-type]').forEach(b
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
       cardEl.classList.remove('dragging');
+      if (hoveredSection) getCardEl(hoveredSection.id)?.classList.remove('drop-target');
 
-      if (moved) { saveStateNoHistory(); return; }
+      if (moved) {
+        if (hoveredSection) {
+          addCardToSection(card, hoveredSection, getCardEl(hoveredSection.id));
+        } else {
+          saveStateNoHistory();
+        }
+        return;
+      }
 
       // Tap: check special always-active targets
       const pt = ev.changedTouches[0];
@@ -6995,6 +7070,14 @@ function initColorPicker() {
     const mu = () => { document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
     document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
   });
+  sb.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.touches[0]; if (t) trackSB({ clientX: t.clientX, clientY: t.clientY });
+    function mm(ev) { const tt = ev.touches[0]; if (tt) trackSB({ clientX: tt.clientX, clientY: tt.clientY }); }
+    function mu() { document.removeEventListener('touchmove', mm); document.removeEventListener('touchend', mu); }
+    document.addEventListener('touchmove', mm, { passive: false });
+    document.addEventListener('touchend', mu);
+  }, { passive: false });
 
   function trackHue(e) {
     const r = hueTrack.getBoundingClientRect();
@@ -7009,6 +7092,14 @@ function initColorPicker() {
     const mu = () => { document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
     document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
   });
+  hueTrack.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.touches[0]; if (t) trackHue({ clientX: t.clientX, clientY: t.clientY });
+    function mm(ev) { const tt = ev.touches[0]; if (tt) trackHue({ clientX: tt.clientX, clientY: tt.clientY }); }
+    function mu() { document.removeEventListener('touchmove', mm); document.removeEventListener('touchend', mu); }
+    document.addEventListener('touchmove', mm, { passive: false });
+    document.addEventListener('touchend', mu);
+  }, { passive: false });
 
   document.getElementById('cp-hex-input').addEventListener('input', e => {
     const val = e.target.value.trim().replace(/^#?/,'#').replace(/^##/,'#');
@@ -7281,10 +7372,13 @@ function commitHistory() {
     picker.style.display = visible ? 'none' : 'block';
     if (!visible) {
       const r = btn.getBoundingClientRect();
-      // Anchor bottom of picker just above the button — no height calculation needed
       picker.style.top = 'auto';
       picker.style.bottom = (window.innerHeight - r.top + 8) + 'px';
-      picker.style.left = Math.max(8, Math.min(r.left + r.width / 2 - 148, window.innerWidth - 312)) + 'px';
+      if (window.innerWidth > 480) {
+        picker.style.left = Math.max(8, Math.min(r.left + r.width / 2 - 148, window.innerWidth - 312)) + 'px';
+      } else {
+        picker.style.left = ''; // let CSS handle it (8px each side)
+      }
     }
   });
 
