@@ -1488,6 +1488,7 @@ html, body {
   border-radius: 14px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.06);
   padding: 14px; width: 296px; display: none; z-index: 3000;
+  overflow: hidden;
 }
 @media (max-width: 480px) {
   #shape-picker { left: 8px !important; right: 8px !important; width: auto !important; }
@@ -1506,9 +1507,10 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; padding: 10px;
   transition: border-color 80ms, background 80ms;
+  overflow: hidden;
 }
 .sp-item:hover { border-color: var(--blue); background: rgba(201,16,46,0.07); }
-.sp-item svg { width: 100%; height: 100%; }
+.sp-item svg { width: 100%; height: 100%; display: block; overflow: hidden; }
 
 /* ── ARROWS LAYER ── */
 #arrows-layer {
@@ -1516,10 +1518,10 @@ html, body {
   width: 8000px; height: 8000px;
   overflow: visible; pointer-events: none;
 }
-.arrow-group { pointer-events: visibleStroke; cursor: pointer; }
+.arrow-group { pointer-events: none; cursor: pointer; }
 .arrow-group .arrow-hit {
-  fill: none; stroke: transparent; stroke-width: 16;
-  pointer-events: stroke; cursor: pointer;
+  fill: none; stroke: rgba(0,0,0,0); stroke-width: 24;
+  pointer-events: all; cursor: pointer;
 }
 .arrow-group .arrow-line {
   fill: none; stroke-linecap: round; stroke-linejoin: round;
@@ -1543,6 +1545,24 @@ html, body {
 /* ── ARROW TOOL ACTIVE ── */
 .dock-btn.tool-active { background: rgba(239,237,231,0.22); color: #EFEDE7; }
 #canvas-viewport.arrow-mode { cursor: crosshair; }
+
+/* ── ARROW MODE EXIT PILL ── */
+#arrow-mode-exit {
+  display: none; position: fixed; z-index: 2000;
+  bottom: 110px; left: 50%; transform: translateX(-50%);
+  background: #1a1a1a; color: #fff;
+  border: none; border-radius: 99px;
+  padding: 10px 20px; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.30);
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+#arrow-mode-exit:hover { opacity: 0.85; }
+@media (max-width: 768px) {
+  #arrow-mode-exit { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); font-size: 14px; padding: 12px 24px; }
+}
 
 /* ── Adaptive text color based on card background luminance ── */
 [data-theme="dark"] { color: #EFEDE7; }
@@ -2285,6 +2305,9 @@ body.is-readonly #signup-cta-bar { display: flex; }
   </button>
 </div>
 
+<!-- ARROW MODE EXIT PILL -->
+<button id="arrow-mode-exit">✕ Done Drawing</button>
+
 <!-- SHAPE PICKER POPUP -->
 <div id="shape-picker">
   <div class="sp-title">Shapes</div>
@@ -2723,7 +2746,8 @@ async function _saveAllBoardsToCloud() {
     return true;
   } catch(err) {
     const msg = err.message || JSON.stringify(err);
-    _setSaveStatus('⚠ ' + msg);
+    _setSaveStatus('⚠ Saved locally');
+    localStorage.setItem('moodboard-state', JSON.stringify(state));
     console.error('Cloud save error:', msg, err);
     return false;
   }
@@ -3257,7 +3281,7 @@ function saveState() {
   const b = state.boards[state.activeBoard];
   b.pan = { ...pan };
   b.zoom = zoom;
-  localStorage.setItem('moodboard-state', JSON.stringify(state));
+  if (!_currentUser) localStorage.setItem('moodboard-state', JSON.stringify(state));
   if (!_inUndoRedo) commitHistory();
   _queueCloudSave();
 }
@@ -3267,7 +3291,7 @@ function saveStateNoHistory() {
   const b = state.boards[state.activeBoard];
   b.pan = { ...pan };
   b.zoom = zoom;
-  localStorage.setItem('moodboard-state', JSON.stringify(state));
+  if (!_currentUser) localStorage.setItem('moodboard-state', JSON.stringify(state));
   _queueCloudSave();
 }
 
@@ -7650,6 +7674,7 @@ function refreshSnapDotSizes() {
 function enterArrowMode() {
   arrowMode = true;
   document.getElementById('arrow-tool-btn').classList.add('tool-active');
+  document.getElementById('arrow-mode-exit').style.display = 'block';
   viewport.classList.add('arrow-mode');
   showSnapDots();
   document.addEventListener('keydown', onArrowEsc);
@@ -7660,10 +7685,13 @@ function exitArrowMode() {
   arrowDrawStart = null;
   arrowPreview.style.display = 'none';
   document.getElementById('arrow-tool-btn').classList.remove('tool-active');
+  document.getElementById('arrow-mode-exit').style.display = 'none';
   viewport.classList.remove('arrow-mode');
   removeSnapDots();
   document.removeEventListener('keydown', onArrowEsc);
 }
+
+document.getElementById('arrow-mode-exit').addEventListener('click', () => exitArrowMode());
 
 function onArrowEsc(e) { if (e.key === 'Escape') { if (arrowDrawStart) { arrowDrawStart = null; arrowPreview.style.display = 'none'; } else exitArrowMode(); } }
 
