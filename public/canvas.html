@@ -2754,10 +2754,14 @@ async function _saveAllBoardsToCloud() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && _currentUser) {
-    clearTimeout(_cloudSaveTimer);
-    _cloudSaveTimer = null;
-    _saveAllBoardsToCloud();
+  if (document.visibilityState === 'hidden') {
+    // Always flush to localStorage immediately when tab hides/closes
+    localStorage.setItem('moodboard-state', JSON.stringify(state));
+    if (_currentUser) {
+      clearTimeout(_cloudSaveTimer);
+      _cloudSaveTimer = null;
+      _saveAllBoardsToCloud();
+    }
   }
 });
 
@@ -3186,7 +3190,20 @@ async function _initApp() {
     if (!hasCloud) {
       const migrated = await _migrateLocalStorage();
       if (!migrated) {
-        // Fresh user — generate a real UUID for the default board
+        // Try localStorage as a safety net before creating a blank board
+        const lsRaw = localStorage.getItem('moodboard-state');
+        if (lsRaw) {
+          try {
+            const ls = JSON.parse(lsRaw);
+            if (ls.boards && Object.keys(ls.boards).length > 0) {
+              state.boards = ls.boards;
+              state.activeBoard = ls.activeBoard || Object.keys(ls.boards)[0];
+              state.theme = ls.theme || [];
+              return;
+            }
+          } catch(e) {}
+        }
+        // Genuinely fresh user
         const newId = _genBoardId();
         state.boards = { [newId]: { id: newId, name: 'Home', parentId: null, pan:{x:0,y:0}, zoom:1, cards:[], arrows:[] } };
         state.activeBoard = newId;
@@ -3281,7 +3298,7 @@ function saveState() {
   const b = state.boards[state.activeBoard];
   b.pan = { ...pan };
   b.zoom = zoom;
-  if (!_currentUser) localStorage.setItem('moodboard-state', JSON.stringify(state));
+  localStorage.setItem('moodboard-state', JSON.stringify(state));
   if (!_inUndoRedo) commitHistory();
   _queueCloudSave();
 }
@@ -3291,7 +3308,7 @@ function saveStateNoHistory() {
   const b = state.boards[state.activeBoard];
   b.pan = { ...pan };
   b.zoom = zoom;
-  if (!_currentUser) localStorage.setItem('moodboard-state', JSON.stringify(state));
+  localStorage.setItem('moodboard-state', JSON.stringify(state));
   _queueCloudSave();
 }
 
