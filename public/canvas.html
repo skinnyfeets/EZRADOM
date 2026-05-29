@@ -263,6 +263,8 @@ html, body {
 #canvas-viewport {
   position: fixed; top: 52px; left: 0; right: 0; bottom: 0;
   overflow: hidden; cursor: default;
+  background-color: var(--bg);
+  -webkit-transform: translateZ(0);
 }
 
 #canvas {
@@ -3307,26 +3309,12 @@ function loadState() {
   zoom = b.zoom || 1;
 }
 
-function _lsSnapshot() {
-  // Signed-in users: strip base64 from localStorage to avoid 5MB quota issues
-  // (images are in cloud storage; the URL is enough)
-  if (_currentUser) {
-    const stripped = {
-      ...state,
-      boards: Object.fromEntries(Object.entries(state.boards).map(([id, board]) => [
-        id, { ...board, cards: _stripBase64ForCloud(board.cards) }
-      ]))
-    };
-    return JSON.stringify(stripped);
-  }
-  return JSON.stringify(state);
-}
-
 function _lsSave() {
+  // Always try to save the full state including base64 images
   try {
-    localStorage.setItem('moodboard-state', _lsSnapshot());
+    localStorage.setItem('moodboard-state', JSON.stringify(state));
   } catch(e) {
-    // Quota exceeded — evict old base64 blobs and retry
+    // Quota exceeded — retry with base64 stripped
     try {
       localStorage.setItem('moodboard-state', JSON.stringify({
         ...state,
@@ -7946,6 +7934,11 @@ document.addEventListener('keydown', e => {
     saveState(); renderArrows();
   }
 });
+
+// ── HEARTBEAT SAVE ── every 10s, always write localStorage regardless of cloud status
+setInterval(() => {
+  if (state && Object.keys(state.boards || {}).length > 0) _lsSave();
+}, 10000);
 
 // ── INITIAL SETUP ──
 _initApp();
