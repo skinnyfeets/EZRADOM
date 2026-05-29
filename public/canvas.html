@@ -2756,7 +2756,7 @@ async function _saveAllBoardsToCloud() {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     // Always flush to localStorage immediately when tab hides/closes
-    localStorage.setItem('moodboard-state', JSON.stringify(state));
+    _lsSave();
     if (_currentUser) {
       clearTimeout(_cloudSaveTimer);
       _cloudSaveTimer = null;
@@ -3099,18 +3099,18 @@ document.getElementById('comment-submit-btn').addEventListener('click', async ()
 
 // ── BOOT ──
 async function _bootApp() {
+  _hideAuth(); // always dismiss auth overlay first — prevents being stuck
   if (!state.theme) state.theme = [];
   const b = state.boards[state.activeBoard];
   if (b) { pan = { ...b.pan }; zoom = b.zoom || 1; }
   renderBoard();
   initColorPicker();
-  if (activeBoard().cards.length === 0) {
+  if (activeBoard()?.cards?.length === 0) {
     pan.x = viewport.offsetWidth / 2 - 100;
     pan.y = viewport.offsetHeight / 2 - 50;
     applyTransform(false);
   }
   _updateUserUI();
-  _hideAuth();
   await _getOrCreateWorkspace();
   // Board owner can see comments left by view-only visitors
   if (b?._shareEnabled && b?._shareToken) {
@@ -3221,8 +3221,14 @@ async function _initApp() {
           history.replaceState({}, '', location.pathname);
         }
       }
-      await _prepareState();
-      await _bootApp();
+      try {
+        await _prepareState();
+        await _bootApp();
+      } catch(err) {
+        console.error('Boot error after sign-in:', err);
+        _hideAuth();
+        _setAuthError('Signed in but failed to load boards. Refreshing may help.');
+      }
     }
   });
 
@@ -3231,8 +3237,13 @@ async function _initApp() {
       const { data: result } = await _sb.rpc('join_workspace', { p_token: inviteToken });
       if (result && !result.error) history.replaceState({}, '', location.pathname);
     }
-    await _prepareState();
-    await _bootApp();
+    try {
+      await _prepareState();
+      await _bootApp();
+    } catch(err) {
+      console.error('Boot error on load:', err);
+      _hideAuth();
+    }
   } else {
     _showAuth();
     if (inviteToken) {
@@ -3294,11 +3305,42 @@ function loadState() {
   zoom = b.zoom || 1;
 }
 
+function _lsSnapshot() {
+  // Signed-in users: strip base64 from localStorage to avoid 5MB quota issues
+  // (images are in cloud storage; the URL is enough)
+  if (_currentUser) {
+    const stripped = {
+      ...state,
+      boards: Object.fromEntries(Object.entries(state.boards).map(([id, board]) => [
+        id, { ...board, cards: _stripBase64ForCloud(board.cards) }
+      ]))
+    };
+    return JSON.stringify(stripped);
+  }
+  return JSON.stringify(state);
+}
+
+function _lsSave() {
+  try {
+    localStorage.setItem('moodboard-state', _lsSnapshot());
+  } catch(e) {
+    // Quota exceeded — evict old base64 blobs and retry
+    try {
+      localStorage.setItem('moodboard-state', JSON.stringify({
+        ...state,
+        boards: Object.fromEntries(Object.entries(state.boards).map(([id, board]) => [
+          id, { ...board, cards: _stripBase64ForCloud(board.cards) }
+        ]))
+      }));
+    } catch(_) {}
+  }
+}
+
 function saveState() {
   const b = state.boards[state.activeBoard];
   b.pan = { ...pan };
   b.zoom = zoom;
-  localStorage.setItem('moodboard-state', JSON.stringify(state));
+  _lsSave();
   if (!_inUndoRedo) commitHistory();
   _queueCloudSave();
 }
@@ -3308,7 +3350,7 @@ function saveStateNoHistory() {
   const b = state.boards[state.activeBoard];
   b.pan = { ...pan };
   b.zoom = zoom;
-  localStorage.setItem('moodboard-state', JSON.stringify(state));
+  _lsSave();
   _queueCloudSave();
 }
 
@@ -3440,6 +3482,7 @@ function renderBoard() {
   // Remove existing cards
   canvas.querySelectorAll('.card').forEach(el => el.remove());
   selectedCards.clear();
+  selectedArrowIds.clear();
 
   const board = activeBoard();
   board.cards.forEach(card => {
@@ -5254,6 +5297,13 @@ function startDrag(e, card, el) {
 
   function findBoardAt(cx, cy) {
     if (card.type === 'board' || card.type === 'section') return null;
+    // Don't allow drop if any selected card is a board/section
+    if (selectedCards.has(card.id) && selectedCards.size > 1) {
+      for (const id of selectedCards) {
+        const c = getCardData(id);
+        if (c && (c.type === 'board' || c.type === 'section')) return null;
+      }
+    }
     for (const c of activeBoard().cards) {
       if (c.type !== 'board' || c.id === card.id) continue;
       const bEl = getCardEl(c.id);
@@ -5314,7 +5364,11 @@ function startDrag(e, card, el) {
     if (hoveredSection) getCardEl(hoveredSection.id)?.classList.remove('drop-target');
     if (hoveredBoard) getCardEl(hoveredBoard.id)?.classList.remove('board-drop-active');
     if (hoveredBoard && moved) {
-      addCardToBoard(card, hoveredBoard);
+      if (selectedCards.has(card.id) && selectedCards.size > 1) {
+        addSelectedCardsToBoard(hoveredBoard);
+      } else {
+        addCardToBoard(card, hoveredBoard);
+      }
     } else if (hoveredSection && moved) {
       addCardToSection(card, hoveredSection, getCardEl(hoveredSection.id));
     } else if (moved) {
@@ -5357,6 +5411,61 @@ function addCardToBoard(canvasCard, boardCard) {
     });
     boardEl.querySelector('.board-card-meta').textContent = count + ' item' + (count !== 1 ? 's' : '');
   }
+  saveState();
+}
+
+function addSelectedCardsToBoard(boardCard) {
+  const boardId = boardCard.content.boardId;
+  if (!boardId || !state.boards[boardId]) return;
+
+  const ids = [...selectedCards];
+  const cardData = ids.map(id => getCardData(id)).filter(Boolean);
+  if (!cardData.length) return;
+
+  pushHistory();
+
+  // Preserve relative positions: shift bounding-box top-left to a clean origin
+  const minX = Math.min(...cardData.map(c => c.x));
+  const minY = Math.min(...cardData.map(c => c.y));
+  const destOriginX = 60, destOriginY = 60;
+
+  const targetBoard = state.boards[boardId];
+  if (!targetBoard.arrows) targetBoard.arrows = [];
+
+  // Move all selected cards
+  const selectedIdSet = new Set(ids);
+  cardData.forEach(c => {
+    const idx = activeBoard().cards.findIndex(x => x.id === c.id);
+    if (idx > -1) activeBoard().cards.splice(idx, 1);
+    c.x = c.x - minX + destOriginX;
+    c.y = c.y - minY + destOriginY;
+    targetBoard.cards.push(c);
+    getCardEl(c.id)?.remove();
+  });
+
+  // Move arrows whose both endpoints belong to the selection
+  const boardArrows = getBoardArrows();
+  const toMove = boardArrows.filter(a => {
+    const fromOk = !a.fromCard || selectedIdSet.has(a.fromCard);
+    const toOk   = !a.toCard   || selectedIdSet.has(a.toCard);
+    return fromOk && toOk;
+  });
+  toMove.forEach(a => {
+    boardArrows.splice(boardArrows.indexOf(a), 1);
+    targetBoard.arrows.push(a);
+  });
+
+  // Update board count badge
+  const boardEl = getCardEl(boardCard.id);
+  if (boardEl) {
+    const count = targetBoard.cards.length;
+    boardEl.querySelectorAll('.board-card-count-badge').forEach(b => b.textContent = count + ' item' + (count !== 1 ? 's' : ''));
+    const meta = boardEl.querySelector('.board-card-meta');
+    if (meta) meta.textContent = count + ' item' + (count !== 1 ? 's' : '');
+  }
+
+  selectedCards.clear();
+  renderArrows();
   saveState();
 }
 
@@ -5531,6 +5640,7 @@ viewport.addEventListener('mousedown', e => {
   isSelecting = true;
 
   selectedCards.clear();
+  selectedArrowIds.clear();
   document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
 
   e.preventDefault(); // prevent browser text selection during rubber-band
@@ -5665,6 +5775,28 @@ function onSelectMove(e) {
       el.classList.add('selected');
     }
   });
+
+  // Also hit-test arrows
+  selectedArrowIds.clear();
+  getBoardArrows().forEach(arrow => {
+    let x1 = arrow.x1, y1 = arrow.y1, x2 = arrow.x2, y2 = arrow.y2;
+    if (arrow.fromCard) {
+      const c = getCardData(arrow.fromCard);
+      if (c && arrow.fromSide) { const p = getSnapPoints(c)[arrow.fromSide]; if (p) { x1 = p.x; y1 = p.y; } }
+    }
+    if (arrow.toCard) {
+      const c = getCardData(arrow.toCard);
+      if (c && arrow.toSide) { const p = getSnapPoints(c)[arrow.toSide]; if (p) { x2 = p.x; y2 = p.y; } }
+    }
+    const s1 = canvasToScreen(x1, y1);
+    const s2 = canvasToScreen(x2, y2);
+    const aMinX = Math.min(s1.x, s2.x), aMaxX = Math.max(s1.x, s2.x);
+    const aMinY = Math.min(s1.y, s2.y), aMaxY = Math.max(s1.y, s2.y);
+    if (aMinX < boxRight && aMaxX > boxLeft && aMinY < boxBottom && aMaxY > boxTop) {
+      selectedArrowIds.add(arrow.id);
+    }
+  });
+  renderArrows();
 }
 
 function onSelectUp() {
@@ -7483,7 +7615,7 @@ function commitHistory() {
 // ── ARROWS / LINES ──
 let arrowMode = false;
 let arrowDrawStart = null; // { x, y, cardId, side } in canvas coords
-let selectedArrowId = null;
+let selectedArrowIds = new Set();
 const arrowsLayer = document.getElementById('arrows-layer');
 const arrowPreview = document.getElementById('arrow-preview');
 
@@ -7575,7 +7707,7 @@ function renderArrows() {
 
     const color = arrow.color || '#C9102E';
     const { d, cp2x, cp2y } = arrowBezierD(x1, y1, fromSide, x2, y2, toSide);
-    const isSelected = arrow.id === selectedArrowId;
+    const isSelected = selectedArrowIds.has(arrow.id);
 
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.classList.add('arrow-group');
@@ -7604,12 +7736,12 @@ function renderArrows() {
 
     g.addEventListener('click', e => {
       e.stopPropagation();
-      selectedArrowId = arrow.id;
+      selectedArrowIds = new Set([arrow.id]);
       renderArrows();
     });
     g.addEventListener('contextmenu', e => {
       e.preventDefault(); e.stopPropagation();
-      selectedArrowId = arrow.id;
+      selectedArrowIds = new Set([arrow.id]);
       showArrowContextMenu(e, arrow);
     });
 
@@ -7794,18 +7926,22 @@ viewport.addEventListener('click', e => {
 
 // Deselect arrow on canvas click
 viewport.addEventListener('mousedown', e => {
-  if (selectedArrowId && e.target === canvas || e.target === dotGridCanvas) {
-    selectedArrowId = null;
+  if (selectedArrowIds.size && (e.target === canvas || e.target === dotGridCanvas)) {
+    selectedArrowIds.clear();
     renderArrows();
   }
 });
 
-// Delete selected arrow with Backspace
+// Delete selected arrows with Backspace
 document.addEventListener('keydown', e => {
-  if ((e.key === 'Backspace' || e.key === 'Delete') && selectedArrowId && document.activeElement === document.body) {
+  if ((e.key === 'Backspace' || e.key === 'Delete') && selectedArrowIds.size && document.activeElement === document.body) {
     const arr = getBoardArrows();
-    const idx = arr.findIndex(a => a.id === selectedArrowId);
-    if (idx > -1) { arr.splice(idx, 1); selectedArrowId = null; saveState(); renderArrows(); }
+    selectedArrowIds.forEach(id => {
+      const idx = arr.findIndex(a => a.id === id);
+      if (idx > -1) arr.splice(idx, 1);
+    });
+    selectedArrowIds.clear();
+    saveState(); renderArrows();
   }
 });
 
