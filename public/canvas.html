@@ -2716,39 +2716,41 @@ function _stripBase64ForCloud(cards) {
 }
 
 async function _saveAllBoardsToCloud() {
-  if (!_currentUser) return false;
-  // Snapshot active board's current pan/zoom into state before saving
-  const ab = state.boards[state.activeBoard];
-  if (ab) { ab.pan = { ...pan }; ab.zoom = zoom; }
-
-  const rows = Object.values(state.boards)
-    .filter(board => !board._ownerId || board._ownerId === _currentUser.id)
-    .map(board => ({
-      id: board.id,
-      owner_id: _currentUser.id,
-      title: board.name || 'Untitled',
-      workspace_id: board._workspaceId || _workspaceId || null,
-      data: {
-        parentId: board.parentId || null,
-        pan: board.pan || { x:0, y:0 },
-        zoom: board.zoom || 1,
-        cards: _stripBase64ForCloud(board.cards),
-        arrows: board.arrows || [],
-      }
-    }));
-
+  if (!_currentUser) { _setSaveStatus(''); return false; }
   _setSaveStatus('Saving…');
   try {
+    // Snapshot active board's current pan/zoom into state before saving
+    const ab = state.boards[state.activeBoard];
+    if (ab) { ab.pan = { ...pan }; ab.zoom = zoom; }
+
+    const rows = Object.values(state.boards)
+      .filter(board => !board._ownerId || board._ownerId === _currentUser.id)
+      .map(board => ({
+        id: board.id,
+        owner_id: _currentUser.id,
+        title: board.name || 'Untitled',
+        workspace_id: board._workspaceId || _workspaceId || null,
+        data: {
+          parentId: board.parentId || null,
+          pan: board.pan || { x:0, y:0 },
+          zoom: board.zoom || 1,
+          cards: _stripBase64ForCloud(board.cards),
+          arrows: board.arrows || [],
+        }
+      }));
+
+    if (rows.length === 0) { _setSaveStatus(''); return false; }
+
     const { error } = await _sb.from('boards').upsert(rows, { onConflict: 'id' });
     if (error) throw error;
     _setSaveStatus('Saved');
     setTimeout(() => _setSaveStatus(''), 2000);
     return true;
   } catch(err) {
-    const msg = err.message || JSON.stringify(err);
-    _setSaveStatus('⚠ Saved locally');
-    localStorage.setItem('moodboard-state', JSON.stringify(state));
-    console.error('Cloud save error:', msg, err);
+    const msg = err?.message || err?.error_description || JSON.stringify(err);
+    _setSaveStatus('⚠ ' + msg);
+    _lsSave();
+    console.error('Cloud save error:', err);
     return false;
   }
 }
