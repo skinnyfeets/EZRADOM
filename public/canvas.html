@@ -3225,35 +3225,11 @@ async function _initApp() {
     }
   }
 
-  _sb.auth.onAuthStateChange(async (event, session) => {
-    _currentUser = session?.user ?? null;
-    if (event === 'SIGNED_IN') {
-      // Handle workspace invite after sign-in
-      if (inviteToken) {
-        const { data: result } = await _sb.rpc('join_workspace', { p_token: inviteToken });
-        if (result && !result.error) {
-          history.replaceState({}, '', location.pathname);
-        }
-      }
-      try {
-        await _prepareState();
-        await _bootApp();
-      } catch(err) {
-        console.error('Boot error after sign-in:', err);
-        _hideAuth();
-        _setAuthError('Signed in but failed to load boards. Refreshing may help.');
-      }
-    } else if (event === 'TOKEN_REFRESHED') {
-      // Session token was refreshed — _currentUser already updated above, nothing else needed
-      console.log('[Canvas] Token refreshed for', _currentUser?.email);
-    } else if (event === 'SIGNED_OUT') {
-      _currentUser = null;
-      clearTimeout(_cloudSaveTimer);
-      _setSaveStatus('');
-    }
-  });
+  let _appBooted = false;
 
-  if (_currentUser) {
+  async function _doBoot() {
+    if (_appBooted) return;
+    _appBooted = true;
     if (inviteToken) {
       const { data: result } = await _sb.rpc('join_workspace', { p_token: inviteToken });
       if (result && !result.error) history.replaceState({}, '', location.pathname);
@@ -3262,16 +3238,35 @@ async function _initApp() {
       await _prepareState();
       await _bootApp();
     } catch(err) {
-      console.error('Boot error on load:', err);
+      console.error('Boot error:', err);
       _hideAuth();
     }
-  } else {
-    _showAuth();
-    if (inviteToken) {
-      const errEl = document.getElementById('auth-error');
-      errEl.textContent = 'Sign in or create an account to join the workspace.';
-      errEl.style.display = 'block';
+  }
+
+  _sb.auth.onAuthStateChange(async (event, session) => {
+    _currentUser = session?.user ?? null;
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && _currentUser) {
+      await _doBoot();
+    } else if (event === 'INITIAL_SESSION' && !_currentUser) {
+      // Confirmed no session — show auth form
+      if (!_appBooted) _showAuth();
+      if (inviteToken) {
+        const errEl = document.getElementById('auth-error');
+        if (errEl) { errEl.textContent = 'Sign in or create an account to join the workspace.'; errEl.style.display = 'block'; }
+      }
+    } else if (event === 'TOKEN_REFRESHED') {
+      // Token refreshed — _currentUser already updated, nothing else needed
+    } else if (event === 'SIGNED_OUT') {
+      _currentUser = null;
+      clearTimeout(_cloudSaveTimer);
+      _setSaveStatus('');
     }
+  });
+
+  // If getSession() already has a user synchronously, boot immediately
+  // Otherwise onAuthStateChange INITIAL_SESSION will fire and boot
+  if (_currentUser) {
+    await _doBoot();
   }
 }
 
@@ -3345,8 +3340,7 @@ function _lsSave() {
 
 function saveState() {
   const b = state.boards[state.activeBoard];
-  b.pan = { ...pan };
-  b.zoom = zoom;
+  if (b) { b.pan = { ...pan }; b.zoom = zoom; }
   _lsSave();
   if (!_inUndoRedo) commitHistory();
   _queueCloudSave();
@@ -3355,8 +3349,7 @@ function saveState() {
 // Save without queuing a history snapshot (used after pre-push mutations).
 function saveStateNoHistory() {
   const b = state.boards[state.activeBoard];
-  b.pan = { ...pan };
-  b.zoom = zoom;
+  if (b) { b.pan = { ...pan }; b.zoom = zoom; }
   _lsSave();
   _queueCloudSave();
 }
@@ -3406,11 +3399,13 @@ function applyTransform(animated) {
 }
 
 // ── BOARD UTILS ──
-function activeBoard() { return state.boards[state.activeBoard]; }
+function activeBoard() {
+  return state.boards[state.activeBoard] || Object.values(state.boards)[0] || null;
+}
 
 function getCardEl(id) { return document.getElementById('card-' + id); }
 
-function cardCount() { return activeBoard().cards.length; }
+function cardCount() { return activeBoard()?.cards?.length ?? 0; }
 
 function updateEmptyState() {
   emptyState.classList.toggle('hidden', cardCount() > 0);
@@ -3592,10 +3587,10 @@ document.getElementById('doc-editor').addEventListener('mousedown', e => {
 });
 
 document.getElementById('doc-editor-title').addEventListener('input', () => {
-  if (_docEditorCard) { _docEditorCard.content.title = document.getElementById('doc-editor-title').textContent; saveState(); }
+  if (_docEditorCard) { _docEditorCard.content.title = document.getElementById('doc-editor-title').textContent; saveStateNoHistory(); }
 });
 document.getElementById('doc-editor-body').addEventListener('input', () => {
-  if (_docEditorCard) { _docEditorCard.content.html = document.getElementById('doc-editor-body').innerHTML; saveState(); }
+  if (_docEditorCard) { _docEditorCard.content.html = document.getElementById('doc-editor-body').innerHTML; saveStateNoHistory(); }
 });
 
 // Doc toolbar buttons
@@ -5194,8 +5189,10 @@ function _attachImagePanHandle(reposHandle, card, el) {
 
 function loadImageFile(file, card, el) {
   const reader = new FileReader();
+  reader.onerror = () => { console.error('FileReader error loading image'); refreshCardElement(card, el); };
   reader.onload = evt => {
     const base64 = evt.target.result;
+    if (!base64) return;
 
     // Always render immediately with base64 — never block on upload
     card.content.src = base64;
@@ -6754,16 +6751,23 @@ document.addEventListener('mousedown', e => {
 
 // ── KEYBOARD SHORTCUTS ──
 document.addEventListener('keydown', e => {
-  // Undo/redo work even in edit mode
-  if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
-  if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
+  const _inText = e.target.isContentEditable || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+
+  if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+    if (!_inText) { e.preventDefault(); undo(); }
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
+    if (!_inText) { e.preventDefault(); redo(); }
+    return;
+  }
 
   if (e.key === 'Escape') {
     if (document.getElementById('doc-editor').style.display !== 'none') { closeDocEditor(); return; }
     if (document.getElementById('file-viewer').style.display !== 'none') { closeFileViewer(); return; }
   }
 
-  if (e.target.isContentEditable || e.target.tagName === 'INPUT') return;
+  if (_inText) return;
 
   if (e.key === 'Escape') {
     const editing = document.querySelectorAll('.card.editing');
@@ -6937,12 +6941,14 @@ document.getElementById('import-btn').addEventListener('click', () => {
 document.getElementById('import-file').addEventListener('change', e => {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
+  reader.onerror = () => showToast('Failed to read file');
   reader.onload = ev => {
     try {
       const imported = JSON.parse(ev.target.result);
       if (!imported.boards || !imported.activeBoard) throw new Error('Invalid format');
       state = imported;
       const b = activeBoard();
+      if (!b) throw new Error('No valid board in file');
       pan = { ...b.pan }; zoom = b.zoom || 1;
       renderBoard();
       showToast('Board imported');
@@ -7504,18 +7510,58 @@ const _undoStacks = {};
 const _redoStacks = {};
 let _inUndoRedo = false;
 
+// Image cache — base64 stored once here instead of duplicated in every history entry.
+// Keys are card IDs; values are { src } for image cards, { thumbnail } for file cards.
+const _imgCache = {};
+
+function _stripForHistory(cards) {
+  return (cards || []).map(card => {
+    let c = card;
+    if (c.type === 'image' && c.content?.src?.startsWith('data:')) {
+      _imgCache[c.id] = { ..._imgCache[c.id], src: c.content.src };
+      c = { ...c, content: { ...c.content, src: '__cached__' } };
+    }
+    if (c.type === 'file' && c.content?.thumbnail?.startsWith('data:')) {
+      _imgCache[c.id] = { ..._imgCache[c.id], thumbnail: c.content.thumbnail };
+      c = { ...c, content: { ...c.content, thumbnail: '__cached__' } };
+    }
+    if (c.content?.children?.length) {
+      c = { ...c, content: { ...c.content, children: _stripForHistory(c.content.children) } };
+    }
+    return c;
+  });
+}
+
+function _restoreFromHistory(cards) {
+  return (cards || []).map(card => {
+    let c = card;
+    const cached = _imgCache[c.id];
+    if (cached) {
+      if (c.type === 'image' && c.content?.src === '__cached__' && cached.src) {
+        c = { ...c, content: { ...c.content, src: cached.src } };
+      }
+      if (c.type === 'file' && c.content?.thumbnail === '__cached__' && cached.thumbnail) {
+        c = { ...c, content: { ...c.content, thumbnail: cached.thumbnail } };
+      }
+    }
+    if (c.content?.children?.length) {
+      c = { ...c, content: { ...c.content, children: _restoreFromHistory(c.content.children) } };
+    }
+    return c;
+  });
+}
+
 function pushHistory() {
   const boardId = state.activeBoard;
   const board = state.boards[boardId];
   if (!board) return;
   if (!_undoStacks[boardId]) _undoStacks[boardId] = [];
   if (!_redoStacks[boardId]) _redoStacks[boardId] = [];
-  const entry = JSON.stringify({ cards: board.cards, arrows: board.arrows || [] });
+  const entry = JSON.stringify({ cards: _stripForHistory(board.cards), arrows: board.arrows || [] });
   const stack = _undoStacks[boardId];
-  // Skip duplicate consecutive entries (prevents wasted undo presses).
   if (stack.length > 0 && stack[stack.length - 1] === entry) return;
   stack.push(entry);
-  if (stack.length > 60) stack.shift();
+  if (stack.length > 30) stack.shift();
   _redoStacks[boardId] = [];
   updateUndoRedoUI();
 }
@@ -7526,9 +7572,9 @@ function undo() {
   if (stack.length === 0) return;
   const board = state.boards[boardId];
   if (!_redoStacks[boardId]) _redoStacks[boardId] = [];
-  _redoStacks[boardId].push(JSON.stringify({ cards: board.cards, arrows: board.arrows || [] }));
+  _redoStacks[boardId].push(JSON.stringify({ cards: _stripForHistory(board.cards), arrows: board.arrows || [] }));
   const prev = JSON.parse(stack.pop());
-  board.cards = prev.cards;
+  board.cards = _restoreFromHistory(prev.cards);
   board.arrows = prev.arrows || [];
   _inUndoRedo = true;
   renderBoard(); saveState();
@@ -7543,9 +7589,9 @@ function redo() {
   if (rStack.length === 0) return;
   const board = state.boards[boardId];
   if (!_undoStacks[boardId]) _undoStacks[boardId] = [];
-  _undoStacks[boardId].push(JSON.stringify({ cards: board.cards, arrows: board.arrows || [] }));
+  _undoStacks[boardId].push(JSON.stringify({ cards: _stripForHistory(board.cards), arrows: board.arrows || [] }));
   const next = JSON.parse(rStack.pop());
-  board.cards = next.cards;
+  board.cards = _restoreFromHistory(next.cards);
   board.arrows = next.arrows || [];
   _inUndoRedo = true;
   renderBoard(); saveState();
@@ -7628,6 +7674,7 @@ const arrowPreview = document.getElementById('arrow-preview');
 
 function getBoardArrows() {
   const b = activeBoard();
+  if (!b) return [];
   if (!b.arrows) b.arrows = [];
   return b.arrows;
 }
@@ -7700,7 +7747,8 @@ function renderArrows() {
 
   const arrows = getBoardArrows();
   arrows.forEach(arrow => {
-    let x1 = arrow.x1, y1 = arrow.y1, x2 = arrow.x2, y2 = arrow.y2;
+    if (!arrow?.id) return; // skip malformed arrows
+    let x1 = arrow.x1 ?? 0, y1 = arrow.y1 ?? 0, x2 = arrow.x2 ?? 100, y2 = arrow.y2 ?? 100;
     let fromSide = arrow.fromSide, toSide = arrow.toSide;
 
     if (arrow.fromCard) {
