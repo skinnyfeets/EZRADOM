@@ -2759,10 +2759,15 @@ async function _saveAllBoardsToCloud() {
     setTimeout(() => _setSaveStatus(''), 2000);
     return true;
   } catch(err) {
-    const msg = err?.message || err?.error_description || JSON.stringify(err);
-    _setSaveStatus('⚠ ' + msg);
     _lsSave();
     console.error('Cloud save error:', err);
+    const msg = err?.message || err?.error_description || '';
+    if (msg.includes('fetch') || msg.includes('network') || msg.includes('NetworkError')) {
+      _setSaveStatus('No connection — saved locally');
+    } else {
+      _setSaveStatus('⚠ Save failed — saved locally');
+    }
+    setTimeout(() => _setSaveStatus(''), 4000);
     return false;
   }
 }
