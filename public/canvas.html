@@ -2717,57 +2717,85 @@ function _stripBase64ForCloud(cards) {
   });
 }
 
-async function _saveAllBoardsToCloud() {
+function _boardToRow(board) {
+  return {
+    id: board.id,
+    owner_id: _currentUser.id,
+    title: board.name || 'Untitled',
+    workspace_id: board._workspaceId || _workspaceId || null,
+    data: {
+      parentId: board.parentId || null,
+      pan: board.pan || { x: 0, y: 0 },
+      zoom: board.zoom || 1,
+      cards: _stripBase64ForCloud(board.cards),
+      arrows: board.arrows || [],
+    }
+  };
+}
+
+async function _verifySession() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (!session) {
+    _currentUser = null;
+    _setSaveStatus('');
+    _showAuth('Session expired — please sign in again.');
+    return false;
+  }
+  _currentUser = session.user;
+  return true;
+}
+
+function _handleSaveError(err) {
+  _lsSave();
+  console.error('Cloud save error:', err);
+  const msg = err?.message || err?.error_description || '';
+  if (msg.includes('fetch') || msg.includes('network') || msg.includes('NetworkError')) {
+    _setSaveStatus('No connection — saved locally');
+  } else {
+    _setSaveStatus('⚠ Save failed — saved locally');
+  }
+  setTimeout(() => _setSaveStatus(''), 4000);
+}
+
+// Debounced save — only saves the active board (fast, avoids timeouts)
+async function _saveActiveBoardToCloud() {
   if (!_currentUser) { _setSaveStatus(''); return false; }
   _setSaveStatus('Saving…');
   try {
-    // Verify session is still valid before attempting write
-    const { data: { session } } = await _sb.auth.getSession();
-    if (!session) {
-      _currentUser = null;
-      _setSaveStatus('');
-      _showAuth('Session expired — please sign in again.');
-      return false;
-    }
-    _currentUser = session.user;
-
-    // Snapshot active board's current pan/zoom into state before saving
+    if (!await _verifySession()) return false;
     const ab = state.boards[state.activeBoard];
-    if (ab) { ab.pan = { ...pan }; ab.zoom = zoom; }
-
-    const rows = Object.values(state.boards)
-      .filter(board => !board._ownerId || board._ownerId === _currentUser.id)
-      .map(board => ({
-        id: board.id,
-        owner_id: _currentUser.id,
-        title: board.name || 'Untitled',
-        workspace_id: board._workspaceId || _workspaceId || null,
-        data: {
-          parentId: board.parentId || null,
-          pan: board.pan || { x:0, y:0 },
-          zoom: board.zoom || 1,
-          cards: _stripBase64ForCloud(board.cards),
-          arrows: board.arrows || [],
-        }
-      }));
-
-    if (rows.length === 0) { _setSaveStatus(''); return false; }
-
-    const { error } = await _sb.from('boards').upsert(rows, { onConflict: 'id' });
+    if (!ab || (ab._ownerId && ab._ownerId !== _currentUser.id)) { _setSaveStatus(''); return false; }
+    ab.pan = { ...pan }; ab.zoom = zoom;
+    const { error } = await _sb.from('boards').upsert([_boardToRow(ab)], { onConflict: 'id' });
     if (error) throw error;
     _setSaveStatus('Saved');
     setTimeout(() => _setSaveStatus(''), 2000);
     return true;
   } catch(err) {
-    _lsSave();
-    console.error('Cloud save error:', err);
-    const msg = err?.message || err?.error_description || '';
-    if (msg.includes('fetch') || msg.includes('network') || msg.includes('NetworkError')) {
-      _setSaveStatus('No connection — saved locally');
-    } else {
-      _setSaveStatus('⚠ Save failed — saved locally');
+    _handleSaveError(err);
+    return false;
+  }
+}
+
+// Full save — saves all boards (used on tab close / sign-out)
+async function _saveAllBoardsToCloud() {
+  if (!_currentUser) { _setSaveStatus(''); return false; }
+  try {
+    if (!await _verifySession()) return false;
+    const ab = state.boards[state.activeBoard];
+    if (ab) { ab.pan = { ...pan }; ab.zoom = zoom; }
+    const rows = Object.values(state.boards)
+      .filter(board => !board._ownerId || board._ownerId === _currentUser.id)
+      .map(_boardToRow);
+    if (rows.length === 0) return false;
+    // Save one at a time to avoid statement timeouts on large payloads
+    for (const row of rows) {
+      const { error } = await _sb.from('boards').upsert([row], { onConflict: 'id' });
+      if (error) throw error;
     }
-    setTimeout(() => _setSaveStatus(''), 4000);
+    return true;
+  } catch(err) {
+    _handleSaveError(err);
     return false;
   }
 }
@@ -2788,7 +2816,7 @@ function _queueCloudSave() {
   if (!_currentUser) return;
   clearTimeout(_cloudSaveTimer);
   _setSaveStatus('Unsaved');
-  _cloudSaveTimer = setTimeout(_saveAllBoardsToCloud, 2000);
+  _cloudSaveTimer = setTimeout(_saveActiveBoardToCloud, 2000);
 }
 
 // ── CLOUD LOAD ──
